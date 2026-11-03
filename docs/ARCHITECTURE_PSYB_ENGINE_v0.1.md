@@ -6,6 +6,8 @@
 **Rev 0.1.1:** Astra's UI-contract review (19:11 UTC) folded in: direct-MIDI glide in ms, per-lane arp index
 (pending Linus), complete envelope defaults + decay convention, transport-stop vs routing conflict fixed,
 step glide FOLLOW/OVERRIDE, parameter table completed (draft IDs), duck NO BUS vs SILENT.
+**Rev 0.1.2:** MONO LOW redesigned as a side-channel high-pass (transparent for mono by construction), QUALITY
+placement noted. Prompted by Astra's UI study 02 caveat.
 
 Everything below marked **(proposal)** is not yet approved by Linus. Lines marked **(Cursor to validate)** are
 behaviour specs whose implementation strategy is Cursor's call.
@@ -245,9 +247,14 @@ Main panel: FM AMOUNT · FORMANT · MOVEMENT · RATE.
   - MIDI without triggers → `WAITING`. INTERNAL with transport stopped → `STOPPED`.
 
 ### 6.4 MONO LOW (width only)
-- Linkwitz-Riley 4th-order crossover on the summed bus; below the freq: (L+R)/2 to both channels.
+- **Side-channel high-pass**, not a band-split crossover: M = (L+R)/2, S = (L−R)/2, S' = HPF(S),
+  out L = M + S', out R = M − S'. The HPF is a 4th-order (LR4-style, 24 dB/oct) high-pass at the MONO LOW freq.
   Freq 50–250 Hz (default 120). Never linked to LOW CUT.
-- Phase-coherent recombination (LR4 allpass match) so a mono signal passes unchanged.
+- Why not an LR4 split + recombine: an LR4 low/high sum is an allpass, so it would phase-shift the whole
+  signal, including mono content. With the side-only filter a **mono signal (S = 0) passes bit-identical by
+  construction**, and only the stereo difference below the freq is removed (its phase is shifted near the
+  corner, which is acceptable for width control).
+- UI wording stays "stereo width below X Hz", never "bass removal".
 
 ### 6.5 MASTER DRIVE + OUTPUT
 - Master drive 0–100% (default 0 in INIT), oversampled, with output compensation (proposal: auto-gain off by
@@ -258,7 +265,8 @@ Main panel: FM AMOUNT · FORMANT · MOVEMENT · RATE.
 
 ## 7. Oversampling policy
 - Oversampled blocks: per-engine drive, FM, master drive. Factor 2x default, 4x option (global
-  "QUALITY: NORMAL / HIGH").
+  "QUALITY: NORMAL / HIGH"). It changes the reported latency, so it needs a visible home in the UI (footer or a
+  settings panel; Astra's call), not only the inspector.
 - Filter type: polyphase IIR (low latency) by default (proposal); linear-phase only if listening tests
   require it. **Report latency** to the host; changing QUALITY updates the latency.
 - Voice filters run at base rate with a TPT topology (stable at high cutoff); revisit if self-oscillation
@@ -359,7 +367,8 @@ Pattern data (steps) is **not** APVTS; it is stored in the state blob (§10) and
 5. Glide: SEQ clamp correctness; direct-MIDI glide continues through release.
 6. Duck: INTERNAL triggers on PPQ integers; MIDI note consumed only when the source is MIDI; AUDIO
    `NO BUS` vs `SILENT` states.
-7. MONO LOW: a mono signal passes unchanged within float tolerance (magnitude + phase).
+7. MONO LOW: a mono signal (L = R) passes bit-identical; a side-only signal below the freq is attenuated by
+   the HPF response; M/S round trip is exact for any input with MONO LOW at its minimum (HPF bypassed).
 8. Aliasing: a swept saw through drive at 2x/4x, energy above the folding threshold below the target.
 9. CPU budget (§7) as a benchmark, not a pass/fail gate in CI.
 10. State: round-trip, oversized blob rejected, out-of-range values clamped.
