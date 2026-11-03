@@ -19,3 +19,27 @@ Rebase onto `main` before merge. No force-push to `main`.
 ## Docs
 
 See [docs/README.md](docs/README.md).
+
+## Identity
+
+These stay put if the product is renamed. The display string `Psy.b` does not.
+
+| Field | Value |
+|-------|--------|
+| Bundle ID | `com.42codon.basssynth` |
+| Plugin code | `Bs01` |
+| Manufacturer code | `Cdon` (42codon-wide; Vizuator keeps `Vizu`) |
+| Company | `42codon` |
+
+## Build
+
+JUCE 8.0.12 via the symlink `ThirdParty/JUCE` → `../../MyJUCE`.
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target BassSynthTests -j8
+./build/BassSynthTests_artefacts/Release/BassSynthTests
+cmake --build build --target BassSynth_All -j8
+```
+
+Distribution and CI pass `-DBASSSYNTH_DEV_PATHS=OFF`. The plugin reports 0 samples of latency until oversampling exists. Parameter IDs are not in this tree yet. The sidechain input is stereo and off until a host enables it.
