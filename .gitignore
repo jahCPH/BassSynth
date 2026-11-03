@@ -1,0 +1,17 @@
+.DS_Store
+
+# Builds
+build/
+Builds/
+cmake-build-*/
+*.dSYM/
+
+# Plugin binaries
+*.component
+*.vst3
+*.app
+
+# Editor / local
+.idea/
+.env
+*.xcuserdata/
