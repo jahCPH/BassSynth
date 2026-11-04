@@ -1,11 +1,12 @@
 #include "ReportedLatency.h"
+#include "Engine/RollVoice.h"
 
 namespace psyb
 {
 
 int hostReportedLatencySamples()
 {
-    return 0;
+    return kRollOversampleLatency;
 }
 
 } // namespace psyb

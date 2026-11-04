@@ -70,11 +70,13 @@ std::vector<psyb::Trigger> playSteps (psyb::PsyEngine& engine, int steps, int bl
 }
 } // namespace
 
+int runRollTests();
+
 int main()
 {
-    if (psyb::hostReportedLatencySamples() != 0)
+    if (psyb::hostReportedLatencySamples() != psyb::kRollOversampleLatency)
     {
-        std::fputs ("hostReportedLatencySamples must stay 0 until oversampling exists\n", stderr);
+        std::fputs ("host latency must match the Rolling 2x drive delay\n", stderr);
         return 1;
     }
 
@@ -686,6 +688,8 @@ int main()
         CHECK (engine.soundingVoices() == 0);
         CHECK (! engine.routeHeld (0, 60));
     }
+
+    gFails += runRollTests();
 
     if (gFails != 0)
     {
