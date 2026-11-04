@@ -572,44 +572,144 @@ void testS9()
     CHECK (psyb::hostReportedLatencySamples() == psyb::kRollOversampleLatency);
 }
 
-void testS10()
+float secondDiffPeak (const std::vector<float>& frame, int begin, int end)
 {
-    psyb::PsyEngine engine;
+    float peak = 0.f;
+    const int last = std::min (end, static_cast<int> (frame.size()) - 1);
+    for (int i = std::max (2, begin); i < last; ++i)
+    {
+        const float d = frame[static_cast<size_t> (i)] - 2.f * frame[static_cast<size_t> (i - 1)]
+                        + frame[static_cast<size_t> (i - 2)];
+        peak = std::max (peak, std::abs (d));
+    }
+    return peak;
+}
+
+float windowPeak (const std::vector<float>& frame, int begin, int end)
+{
+    float peak = 0.f;
+    const int last = std::min (end, static_cast<int> (frame.size()));
+    for (int i = std::max (0, begin); i < last; ++i)
+        peak = std::max (peak, std::abs (frame[static_cast<size_t> (i)]));
+    return peak;
+}
+
+psyb::RollParams heldSlide()
+{
+    auto params = slideParams();
+    params.cutoffHz = 1500.f;
+    params.reso = 0.15f;
+    params.envAmt = 0.f;
+    params.asus = 1.f;
+    params.fsus = 1.f;
+    params.adecMs = 4000.f;
+    params.fdecMs = 4000.f;
+    params.drive = 0.f;
+    params.sub = 0.f;
+    return params;
+}
+
+void armSlide (psyb::PsyEngine& engine, const psyb::RollParams& params)
+{
     engine.loadInit();
     silenceLane (engine, 0);
     useMidi (engine, 1);
     silenceLane (engine, 2);
     engine.setEngineAudible (1, true);
-    auto params = slideParams();
-    params.cutoffHz = 20.f;
-    params.reso = 0.5f;
+    engine.setEngineLevelDb (1, 0.f);
     engine.setSlideParams (params);
-    const int at = 6000;
-    std::vector<float> moving (static_cast<size_t> (at + 2000));
+}
+
+template <typename AtSample>
+std::vector<float> renderSlide (psyb::PsyEngine& engine, int total, int at, AtSample&& atSample)
+{
+    std::vector<float> out (static_cast<size_t> (total));
     int done = 0;
-    while (done < at + 2000)
+    bool fired = false;
+    while (done < total)
     {
-        if (done == at)
+        if (! fired && at >= 0 && done >= at)
         {
-            params.cutoffHz = 20000.f;
-            engine.setSlideParams (params);
+            atSample();
+            fired = true;
         }
-        const int n = std::min (128, at + 2000 - done);
+        const int n = std::min (128, total - done);
         psyb::Block block { 48000.0, 145.0, 0.0, n, false };
-        psyb::MidiIn on = midi (0, 50, 100);
+        psyb::MidiIn on = midi (0, 48, 100);
         const bool send = done == 0;
-        engine.process (block, send ? &on : nullptr, send ? 1 : 0, moving.data() + done);
+        engine.process (block, send ? &on : nullptr, send ? 1 : 0, out.data() + done);
         done += n;
     }
-    float peak = 0.f;
-    for (int i = at + 2; i < at + 1500; ++i)
+    return out;
+}
+
+void testS10()
+{
+    constexpr int at = 8000;
+    constexpr int total = at + 9000;
+    constexpr float kClick = 4.f;
+    const auto base = heldSlide();
+
+    psyb::PsyEngine jump;
+    armSlide (jump, base);
+    const auto moving = renderSlide (jump, total, at, [&]
     {
-        const float d = moving[static_cast<size_t> (i)] - 2.f * moving[static_cast<size_t> (i - 1)]
-                        + moving[static_cast<size_t> (i - 2)];
-        peak = std::max (peak, std::abs (d));
-    }
-    std::fprintf (stderr, "S10 jump %.5f\n", peak);
-    CHECK (peak < 0.05f);
+        auto high = base;
+        high.cutoffHz = 8000.f;
+        jump.setSlideParams (high);
+    });
+    psyb::PsyEngine steady;
+    auto high = base;
+    high.cutoffHz = 8000.f;
+    armSlide (steady, high);
+    const auto held = renderSlide (steady, total, -1, [] {});
+    const float dest = secondDiffPeak (held, at, at + 2000);
+    const float edge = secondDiffPeak (moving, at, at + 2000);
+    const float heard = windowPeak (moving, at - 2000, at);
+    const float arrived = windowPeak (moving, at + 2000, at + 4000);
+    const float destPeak = windowPeak (held, at + 2000, at + 4000);
+    std::fprintf (stderr, "S10 cutoff jump %.5f steady %.5f heard %.5f arrived %.5f dest %.5f\n",
+                  edge, dest, heard, arrived, destPeak);
+    CHECK (heard > 0.05f);
+    CHECK (dest > 1.0e-4f);
+    CHECK (edge <= dest * kClick);
+    CHECK (arrived > destPeak * 0.5f && arrived < destPeak * 2.f);
+
+    psyb::PsyEngine level;
+    armSlide (level, base);
+    const auto dropped = renderSlide (level, total, at, [&] { level.setEngineLevelDb (1, -40.f); });
+    const float before = secondDiffPeak (dropped, at - 2000, at);
+    const float levelEdge = secondDiffPeak (dropped, at, at + 400);
+    const float late = windowPeak (dropped, at + 4000, at + 5000);
+    std::fprintf (stderr, "S10 level edge %.5f before %.5f late %.5f\n", levelEdge, before, late);
+    CHECK (windowPeak (dropped, at - 2000, at) > 0.05f);
+    CHECK (before > 1.0e-4f);
+    CHECK (levelEdge <= before * kClick);
+    CHECK (late < windowPeak (dropped, at - 2000, at) * 0.15f);
+
+    psyb::PsyEngine mute;
+    armSlide (mute, base);
+    const auto off = renderSlide (mute, total, at, [&] { mute.setEngineAudible (1, false); });
+    const float onEdge = secondDiffPeak (off, at, at + 400);
+    const float onBefore = secondDiffPeak (off, at - 2000, at);
+    bool silent = true;
+    for (int i = at + 8000; i < at + 8500; ++i)
+        silent = silent && off[static_cast<size_t> (i)] == 0.f;
+    std::fprintf (stderr, "S10 on edge %.5f before %.5f silent %d\n", onEdge, onBefore, silent ? 1 : 0);
+    CHECK (windowPeak (off, at - 2000, at) > 0.05f);
+    CHECK (onBefore > 1.0e-4f);
+    CHECK (onEdge <= onBefore * kClick);
+    CHECK (silent);
+
+    psyb::PsyEngine floor;
+    armSlide (floor, base);
+    const auto bottom = renderSlide (floor, total, at, [&] { floor.setEngineLevelDb (1, -60.f); });
+    bool muted = true;
+    for (int i = at + 8000; i < at + 8500; ++i)
+        muted = muted && bottom[static_cast<size_t> (i)] == 0.f;
+    std::fprintf (stderr, "S10 floor silent %d\n", muted ? 1 : 0);
+    CHECK (windowPeak (bottom, at - 2000, at) > 0.05f);
+    CHECK (muted);
 }
 
 void testS11()

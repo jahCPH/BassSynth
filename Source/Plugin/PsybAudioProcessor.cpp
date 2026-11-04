@@ -37,7 +37,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout parameterLayout()
     add ("r_asus", "Amp Sustain", { 0.f, 100.f }, 0.f);
     add ("r_arel", "Amp Release", hz (2.f, 2000.f, 0.3f), 12.f);
     add ("r_drive", "Drive", { 0.f, 100.f }, 15.f);
-    add ("r_level", "Roll Level", { -24.f, 6.f }, 0.f);
+    add ("r_level", "Roll Level", { -60.f, 6.f, 0.1f }, 0.f);
     add ("b_sublevel", "Sub", { 0.f, 100.f }, 70.f);
     add ("b_output", "Output", { -24.f, 6.f }, 0.f);
     add ("s_cutoff", "Slide Cutoff", hz (20.f, 20000.f, 0.3f), 1200.f);
@@ -54,7 +54,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout parameterLayout()
     add ("s_accent", "Accent", { 0.f, 100.f }, 50.f);
     add ("s_glide_seq", "Glide", { 0.f, 100.f }, 40.f);
     add ("s_glide_ms", "Glide ms", { 0.f, 2000.f, 0.1f }, 60.f);
-    add ("s_level", "Slide Level", { -24.f, 6.f }, 0.f);
+    add ("s_level", "Slide Level", { -60.f, 6.f, 0.1f }, 0.f);
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { "r_on", 1 }, "Roll On", true));
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { "r_phasereset", 1 }, "Phase Reset", true));
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { "r_filterreset", 1 }, "Filter Reset", true));

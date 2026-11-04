@@ -176,6 +176,7 @@ private:
     void startVoice (int engine, int sample, int note, bool retrigger, const GlideInfo& glide, float glideMs, bool accented);
     bool ownsSub (int engine) const;
     RollVoice* bassVoices (int engine);
+    void updateEngineGain (int engine);
     void renderSample (float& out);
     int pickNote (int engine);
     void advanceArp (int engine);
@@ -208,7 +209,11 @@ private:
     RollVoice rollVoice[3] {};
     RollVoice slideVoice[3] {};
     bool engineAudible[2] = { true, false };
-    float engineGain[2] = { 1.f, 1.f };
+    float engineLevelDb[2] = { 0.f, 0.f };
+    float engineGain[2] = { 1.f, 0.f };
+    float engineGainSm[2] = { 1.f, 0.f };
+    bool engineGainPrimed[2] = { false, false };
+    float engineGainCoef = 0.f;
     SubOwner subOwner = SubOwner::Roll;
     float slideAccent = 0.5f;
 };

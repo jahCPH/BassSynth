@@ -121,8 +121,15 @@ void PsyEngine::reset()
     slideAccent = 0.5f;
     engineAudible[0] = true;
     engineAudible[1] = false;
+    engineLevelDb[0] = 0.f;
+    engineLevelDb[1] = 0.f;
     engineGain[0] = 1.f;
-    engineGain[1] = 1.f;
+    engineGain[1] = 0.f;
+    engineGainSm[0] = 1.f;
+    engineGainSm[1] = 0.f;
+    engineGainPrimed[0] = false;
+    engineGainPrimed[1] = false;
+    engineGainCoef = 0.f;
     for (auto& voice : rollVoice)
         voice.reset();
     for (auto& voice : slideVoice)
@@ -195,16 +202,34 @@ void PsyEngine::setSlideParams (const RollParams& params)
     slideTarget = params;
 }
 
+void PsyEngine::updateEngineGain (int engine)
+{
+    // −60 dB is the bottom of the level slider and means mute.
+    float target = 0.f;
+    if (engineAudible[engine] && engineLevelDb[engine] > -60.f)
+        target = std::pow (10.f, engineLevelDb[engine] / 20.f);
+    engineGain[engine] = target;
+    if (! engineGainPrimed[engine])
+    {
+        engineGainSm[engine] = target;
+        engineGainPrimed[engine] = true;
+    }
+}
+
 void PsyEngine::setEngineAudible (int engine, bool on)
 {
-    if (engine >= 0 && engine < 2)
-        engineAudible[engine] = on;
+    if (engine < 0 || engine >= 2)
+        return;
+    engineAudible[engine] = on;
+    updateEngineGain (engine);
 }
 
 void PsyEngine::setEngineLevelDb (int engine, float db)
 {
-    if (engine >= 0 && engine < 2)
-        engineGain[engine] = std::pow (10.f, db / 20.f);
+    if (engine < 0 || engine >= 2)
+        return;
+    engineLevelDb[engine] = db;
+    updateEngineGain (engine);
 }
 
 void PsyEngine::setSubOwner (SubOwner owner) { subOwner = owner; }
@@ -693,15 +718,26 @@ void PsyEngine::renderSample (float& out)
     const int decayN = samplesFor (kDecaySec, renderRate);
     const int releaseN = samplesFor (kReleaseSec, renderRate);
 
+    const float gainCoef = engineGainCoef > 0.f
+                               ? engineGainCoef
+                               : 1.f - std::exp (-1.f / (0.008f * static_cast<float> (renderRate)));
+    for (int e = 0; e < 2; ++e)
+    {
+        engineGainSm[e] += (engineGain[e] - engineGainSm[e]) * gainCoef;
+        if (engineGain[e] == 0.f && std::abs (engineGainSm[e]) < 1.0e-6f)
+            engineGainSm[e] = 0.f;
+    }
+
     for (int e = 0; e < kEngineCount; ++e)
     {
         auto& lane = lanes[e];
-        if (! lane.cfg.enabled)
-            continue;
-
         Voice* slots[3] = { &lane.active, &lane.tail, &lane.stolen };
         if (RollVoice* bass = bassVoices (e))
         {
+            const bool live = lane.active.used || lane.tail.used || lane.stolen.used;
+            const bool muted = ! engineAudible[e] && engineGainSm[e] == 0.f;
+            if ((muted && ! live) || (! lane.cfg.enabled && ! live))
+                continue;
             RollParams params = e == 0 ? rollTarget : slideTarget;
             if (! ownsSub (e))
                 params.sub = 0.f;
@@ -730,11 +766,14 @@ void PsyEngine::renderSample (float& out)
                     rv.reset();
                     continue;
                 }
-                if (engineAudible[e])
-                    out += sample * engineGain[e];
+                if (engineGainSm[e] != 0.f)
+                    out += sample * engineGainSm[e];
             }
             continue;
         }
+
+        if (! lane.cfg.enabled)
+            continue;
 
         for (auto* v : slots)
         {
@@ -802,6 +841,7 @@ void PsyEngine::process (const Block& block, const MidiIn* midi, int midiCount, 
 
     const FlushDenormals flushDenormals;
     renderRate = block.sampleRate;
+    engineGainCoef = 1.f - std::exp (-1.f / (0.008f * static_cast<float> (block.sampleRate)));
     for (auto& voice : rollVoice)
         voice.prepareBlock (rollTarget, block.sampleRate);
     for (auto& voice : slideVoice)
