@@ -3,10 +3,10 @@
 namespace psyb
 {
 
-/** Router, sequencer, arp, and voices land in this library.
+/** Sequencer, arp, router, and the test voice live in Sequencer.h.
 
-    The third-note retrigger strategy is not decided here. This header only
-    marks the target so the plugin and the headless tests share one DSP lib.
+    A third onset while the tail is still fading steals that tail with a
+    short ramp. The new voice still starts on the scheduled sample.
 */
 struct EngineSlot
 {

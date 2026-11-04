@@ -59,7 +59,8 @@ juce_add_plugin(BassSynth
 juce_generate_juce_header(BassSynth)
 
 add_library(psyb_dsp STATIC
-    Source/Dsp/ReportedLatency.cpp)
+    Source/Dsp/ReportedLatency.cpp
+    Source/Engine/Sequencer.cpp)
 
 target_include_directories(psyb_dsp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Source")
 target_compile_features(psyb_dsp PUBLIC cxx_std_17)
@@ -90,7 +91,7 @@ target_link_libraries(BassSynth
         juce::juce_recommended_warning_flags)
 
 if(BASSSYNTH_BUILD_TESTS)
-    add_executable(BassSynthTests Tests/LatencyTests.cpp)
+    add_executable(BassSynthTests Tests/SeqTests.cpp)
     target_link_libraries(BassSynthTests PRIVATE psyb_dsp)
     target_compile_features(BassSynthTests PRIVATE cxx_std_17)
 endif()
