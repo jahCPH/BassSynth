@@ -26,14 +26,16 @@ struct RollParams
     float outputDb = 0.f;
 };
 
-/** One Rolling slot: polyBLEP saw, sub, TPT ladder, amp/filter env, 2x drive.
-    Slide and FX do not use this. */
+/** One bass slot: polyBLEP saw, sub, TPT ladder, amp/filter env, 2x drive.
+    Rolling and Sliding each own three of these. FX does not use this. */
 class RollVoice
 {
 public:
     void reset();
     void prime (const RollParams& params);
     void copySmoothingFrom (const RollVoice& other);
+    void prepareBlock (const RollParams& params, double sampleRate);
+    void setAccent (float gain, float envAdd);
     void start (bool phaseReset, bool filterReset, const RollVoice* inherit);
     void release();
     void beginFade (int samples);
@@ -66,6 +68,19 @@ private:
     float smDrive = 0.15f;
     float smEnv = 0.6f;
     float smSub = 0.7f;
+    float accentGain = 1.f;
+    float accentEnv = 0.f;
+
+    bool coefReady = false;
+    float cSmooth = 0.f;
+    float cAStep = 0.f;
+    float cFStep = 0.f;
+    float cACoef = 0.f;
+    float cRCoef = 0.f;
+    float cFCoef = 0.f;
+    float cAsus = 0.f;
+    float cFsus = 0.f;
+    float cDcR = 0.f;
 
     float z[4] {};
     float dcX = 0.f;

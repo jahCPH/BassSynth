@@ -32,6 +32,8 @@ private:
     PsybAudioProcessor& synth;
     std::vector<std::unique_ptr<Knob>> knobs;
     std::vector<std::unique_ptr<Toggle>> toggles;
+    juce::ComboBox subOwner;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> subOwnerAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PsybAudioProcessorEditor)
 };

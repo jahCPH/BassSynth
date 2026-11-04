@@ -15,6 +15,7 @@ constexpr int kMaxTriggers = 64;
 enum class SourceMode : int { Seq = 0, Midi = 1 };
 enum class ArpOrder : int { Up = 0, Down = 1, UpDown = 2, AsPlayed = 3, Random = 4 };
 enum class DuckSource : int { Internal = 0, Midi = 1, Audio = 2 };
+enum class SubOwner : int { Roll = 0, Slide = 1, Off = 2 };
 
 struct Step
 {
@@ -101,6 +102,12 @@ public:
     void setLane (int engine, const LaneConfig& lane);
     void setStep (int engine, int index, const Step& step);
     void setRollParams (const RollParams& params);
+    void setSlideParams (const RollParams& params);
+    void setEngineAudible (int engine, bool on);
+    void setEngineLevelDb (int engine, float db);
+    void setSubOwner (SubOwner owner);
+    void setSlideAccent (float amount01);
+    void setLaneGlide (int engine, float seqFraction, float midiMs);
     LaneConfig lane (int engine) const;
     Step step (int engine, int index) const;
 
@@ -113,6 +120,7 @@ public:
     int heldCount() const;
     bool voiceActive (int engine) const;
     bool voiceReleasing (int engine) const;
+    float voiceEnv (int engine) const;
 
 private:
     struct Voice
@@ -165,7 +173,9 @@ private:
     void fireStep (int engine, int64_t absoluteStep, int sample, double startPpq, double endPpq, const Block& block);
     void releaseEngine (int engine, int sample, bool seqOnly);
     void releaseOpenTies();
-    void startVoice (int engine, int sample, int note, bool retrigger, const GlideInfo& glide, float glideMs);
+    void startVoice (int engine, int sample, int note, bool retrigger, const GlideInfo& glide, float glideMs, bool accented);
+    bool ownsSub (int engine) const;
+    RollVoice* bassVoices (int engine);
     void renderSample (float& out);
     int pickNote (int engine);
     void advanceArp (int engine);
@@ -192,8 +202,15 @@ private:
     int triggersN = 0;
     bool transportWasPlaying = false;
     RollParams rollTarget {};
+    RollParams slideTarget {};
     bool rollPrimed = false;
+    bool slidePrimed = false;
     RollVoice rollVoice[3] {};
+    RollVoice slideVoice[3] {};
+    bool engineAudible[2] = { true, false };
+    float engineGain[2] = { 1.f, 1.f };
+    SubOwner subOwner = SubOwner::Roll;
+    float slideAccent = 0.5f;
 };
 
 } // namespace psyb
