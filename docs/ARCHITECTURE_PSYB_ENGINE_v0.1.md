@@ -1,4 +1,4 @@
-# Psy.b — Engine Architecture v0.1
+# PsyRoot — Engine Architecture v0.1
 
 **Status:** Draft for review · **Owner:** Fable / Claude (engine architecture) · **Date:** 2026-11-03
 **Reviewers:** Astra (UI/interaction), Cursor (implementation feasibility) · **Approver:** Linus
@@ -9,6 +9,7 @@ step glide FOLLOW/OVERRIDE, parameter table completed (draft IDs), duck NO BUS v
 **Rev 0.1.2:** MONO LOW redesigned as a side-channel high-pass (transparent for mono by construction), QUALITY
 placement noted. Prompted by Astra's UI study 02 caveat.
 **Rev 0.1.3:** L1 decided by Linus (2026-11-04): 7-day trial + Moonbase licensing, no separate beta expiry.
+**Rev 0.1.5:** product name is **PsyRoot** (display only; identifiers stay name-neutral). "Psy.b" below = PsyRoot.
 **Rev 0.1.4:** Q1–Q3 decided by Linus (2026-11-04): arp order list, LATCH added, per-step pitch offset kept,
 per-lane transpose added, per-lane arp index.
 
@@ -19,7 +20,7 @@ behaviour specs whose implementation strategy is Cursor's call.
 
 ## 0. Scope and non-goals
 
-Psy.b is a psytrance bass instrument plugin (AU + VST3, macOS 13+, universal) with three mono engines,
+PsyRoot is a psytrance bass instrument plugin (AU + VST3, macOS 13+, universal) with three mono engines,
 a host-synced step sequencer/arp per engine, and a shared bus (duck, sub ownership, mono low, master drive).
 
 In scope for v0.1: audio graph, event/timing model, voice model, DSP blocks per engine, bus, parameter list
