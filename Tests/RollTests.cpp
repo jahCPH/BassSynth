@@ -278,8 +278,7 @@ void testR2()
     const int onset = firstAbove (out, 1.0e-3f);
     std::fprintf (stderr, "R2 onset %d scheduled %d latency %d delta %d\n",
                   onset, expect, psyb::kRollOversampleLatency, onset - expect);
-    CHECK (onset >= expect);
-    CHECK (std::abs ((onset - expect) - psyb::kRollOversampleLatency) <= 8);
+    CHECK (onset - expect == psyb::kRollOversampleLatency);
 }
 
 void testR3()
@@ -493,6 +492,39 @@ void testR8()
     CHECK (lowSub > lowFund);
 }
 
+void testFilterResetClick()
+{
+    // Filter reset OFF inherits the ladder only. Copying the DC blocker onto
+    // a cleared FIR emits a step; the first samples of the new voice stay small.
+    psyb::RollParams params;
+    params.drive = 1.f;
+    params.cutoffHz = 1800.f;
+    params.reso = 0.6f;
+    params.sub = 0.7f;
+    params.asus = 1.f;
+    params.fsus = 0.5f;
+    params.adecMs = 4000.f;
+    params.filterReset = false;
+    params.phaseReset = true;
+
+    psyb::RollVoice previous;
+    previous.prime (params);
+    previous.start (true, true, nullptr);
+    float warm = 0.f;
+    for (int i = 0; i < 48000; ++i)
+        warm = std::max (warm, std::abs (previous.process (params, 48000.0, 55.f)));
+    CHECK (warm > 0.05f);
+
+    psyb::RollVoice born;
+    born.copySmoothingFrom (previous);
+    born.start (true, false, &previous);
+    float peak = 0.f;
+    for (int i = 0; i < 8; ++i)
+        peak = std::max (peak, std::abs (born.process (params, 48000.0, 55.f)));
+    std::fprintf (stderr, "filter-reset click peak %.5f\n", peak);
+    CHECK (peak < 0.02f);
+}
+
 void testR9()
 {
     psyb::PsyEngine engine;
@@ -524,6 +556,7 @@ int runRollTests()
     testR6();
     testR7();
     testR8();
+    testFilterResetClick();
     testR9();
     return fails;
 }

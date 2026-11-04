@@ -120,11 +120,13 @@ void RollVoice::start (bool phaseReset, bool filterReset, const RollVoice* inher
     {
         for (int i = 0; i < 4; ++i)
             z[i] = inherit->z[i];
-        dcX = inherit->dcX;
-        dcY = inherit->dcY;
     }
     else
         clearFilter();
+
+    // The FIR is empty, so a copied DC blocker would emit a -dcX step.
+    dcX = 0.f;
+    dcY = 0.f;
 
     clearFir();
     amp = 0.f;
@@ -187,7 +189,10 @@ float RollVoice::process (const RollParams& target, double sampleRate, float fre
     {
         amp = asus + (amp - asus) * aCoef;
         if (std::abs (amp - asus) < 0.0005f)
+        {
+            amp = asus;
             ampStage = kSustain;
+        }
     }
     else if (ampStage == kRelease)
         amp *= rCoef;
@@ -259,8 +264,8 @@ float RollVoice::process (const RollParams& target, double sampleRate, float fre
     };
     const float up0 = driveSample (2.f * fir (up, upPos, shaped));
     const float up1 = driveSample (2.f * fir (up, upPos, 0.f));
-    fir (down, downPos, up0);
-    float out = fir (down, downPos, up1);
+    float out = fir (down, downPos, up0);
+    fir (down, downPos, up1);
 
     if (fadeSpan > 0)
     {
