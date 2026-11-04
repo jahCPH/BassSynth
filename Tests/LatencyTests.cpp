@@ -1,12 +1,12 @@
-#include <juce_core/juce_core.h>
-
 #include "Dsp/ReportedLatency.h"
+
+#include <cstdio>
 
 int main()
 {
     if (psyb::hostReportedLatencySamples() != 0)
     {
-        juce::Logger::writeToLog ("hostReportedLatencySamples must stay 0 until oversampling exists");
+        std::fputs("hostReportedLatencySamples must stay 0 until oversampling exists\n", stderr);
         return 1;
     }
 

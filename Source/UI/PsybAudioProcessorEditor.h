@@ -2,7 +2,7 @@
 
 #include "Plugin/PsybAudioProcessor.h"
 
-/** Placeholder window. The Psy.b label is a display string, not the plugin id. */
+/** Placeholder window. The PsyRoot label is a display string, not the plugin id. */
 class PsybAudioProcessorEditor : public juce::AudioProcessorEditor
 {
 public:

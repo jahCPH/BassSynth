@@ -54,7 +54,7 @@ juce_add_plugin(BassSynth
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD FALSE
     FORMATS AU VST3
-    PRODUCT_NAME "Psy.b")
+    PRODUCT_NAME "PsyRoot")
 
 juce_generate_juce_header(BassSynth)
 
@@ -62,7 +62,6 @@ add_library(psyb_dsp STATIC
     Source/Dsp/ReportedLatency.cpp)
 
 target_include_directories(psyb_dsp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Source")
-target_link_libraries(psyb_dsp PUBLIC juce::juce_core)
 target_compile_features(psyb_dsp PUBLIC cxx_std_17)
 
 target_sources(BassSynth
@@ -91,17 +90,7 @@ target_link_libraries(BassSynth
         juce::juce_recommended_warning_flags)
 
 if(BASSSYNTH_BUILD_TESTS)
-    juce_add_console_app(BassSynthTests
-        PRODUCT_NAME "BassSynthTests"
-        COMPANY_NAME "42codon")
-
-    target_sources(BassSynthTests PRIVATE Tests/LatencyTests.cpp)
-    target_include_directories(BassSynthTests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/Source")
-    target_compile_definitions(BassSynthTests PRIVATE JUCE_UNIT_TESTS=1)
-    target_link_libraries(BassSynthTests
-        PRIVATE
-            psyb_dsp
-            juce::juce_core
-            juce::juce_recommended_config_flags
-            juce::juce_recommended_warning_flags)
+    add_executable(BassSynthTests Tests/LatencyTests.cpp)
+    target_link_libraries(BassSynthTests PRIVATE psyb_dsp)
+    target_compile_features(BassSynthTests PRIVATE cxx_std_17)
 endif()

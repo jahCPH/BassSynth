@@ -2,7 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 
-/** Empty synth shell. Display name is Psy.b and may change.
+/** Empty synth shell. Display name is PsyRoot.
     Bundle id, plugin code, and the manufacturer code are name-neutral.
 */
 class PsybAudioProcessor : public juce::AudioProcessor

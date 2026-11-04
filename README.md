@@ -1,6 +1,6 @@
-# Psy.b
+# PsyRoot
 
-Psytrance bass instrument. AU + VST3, macOS. Product name **Psy.b**. This repository is BassSynth.
+Psytrance bass instrument. AU + VST3, macOS. Product name **PsyRoot**. This repository is BassSynth.
 
 Coordination lives in ChatBoxx `#basssynth`.
 
@@ -22,7 +22,7 @@ See [docs/README.md](docs/README.md).
 
 ## Identity
 
-These stay put if the product is renamed. The display string `Psy.b` does not.
+These stay put if the product is renamed again. The display string is `PsyRoot`.
 
 | Field | Value |
 |-------|--------|
@@ -38,7 +38,7 @@ JUCE 8.0.12 via the symlink `ThirdParty/JUCE` → `../../MyJUCE`.
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --target BassSynthTests -j8
-./build/BassSynthTests_artefacts/Release/BassSynthTests
+./build/BassSynthTests
 cmake --build build --target BassSynth_All -j8
 ```
 

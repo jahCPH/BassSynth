@@ -42,7 +42,7 @@ jobs:
         run: cmake --build build --target BassSynthTests -j3
 
       - name: Run tests
-        run: ./build/BassSynthTests_artefacts/Release/BassSynthTests
+        run: ./build/BassSynthTests
 
   build:
     name: Plugin build (macOS)

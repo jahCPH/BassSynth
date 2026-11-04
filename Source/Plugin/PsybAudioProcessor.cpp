@@ -45,7 +45,7 @@ juce::AudioProcessorEditor* PsybAudioProcessor::createEditor()
 
 bool PsybAudioProcessor::hasEditor() const { return true; }
 
-const juce::String PsybAudioProcessor::getName() const { return "Psy.b"; }
+const juce::String PsybAudioProcessor::getName() const { return "PsyRoot"; }
 
 bool PsybAudioProcessor::acceptsMidi() const { return true; }
 bool PsybAudioProcessor::producesMidi() const { return false; }
