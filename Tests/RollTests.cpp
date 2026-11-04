@@ -495,7 +495,7 @@ void testR8()
 void testFilterResetClick()
 {
     // Filter reset OFF inherits the ladder only. Copying the DC blocker onto
-    // a cleared FIR emits a step; the first samples of the new voice stay small.
+    // a cleared FIR emits a step 64 samples later, after the drive delay.
     psyb::RollParams params;
     params.drive = 1.f;
     params.cutoffHz = 1800.f;
@@ -519,7 +519,7 @@ void testFilterResetClick()
     born.copySmoothingFrom (previous);
     born.start (true, false, &previous);
     float peak = 0.f;
-    for (int i = 0; i < 8; ++i)
+    for (int i = 0; i < psyb::kRollOversampleLatency; ++i)
         peak = std::max (peak, std::abs (born.process (params, 48000.0, 55.f)));
     std::fprintf (stderr, "filter-reset click peak %.5f\n", peak);
     CHECK (peak < 0.02f);

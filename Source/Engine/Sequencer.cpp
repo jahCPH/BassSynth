@@ -2,6 +2,13 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+
+#if defined (__x86_64__) || defined (_M_X64) || defined (__i386__) || defined (_M_IX86)
+ #include <pmmintrin.h>
+#elif defined (__aarch64__)
+ // FPCR is set with an instruction below.
+#endif
 
 namespace psyb
 {
@@ -13,6 +20,35 @@ constexpr double kReleaseSec = 0.012;
 constexpr double kTailSec = 0.002;
 constexpr double kStealSec = 0.0003;
 constexpr double kSilence = 1.0e-3;
+
+/** Flush denormals for the audio callback. JUCE-free so the DSP lib and the
+    headless tests get the same protection as the plugin's ScopedNoDenormals. */
+struct FlushDenormals
+{
+#if defined (__x86_64__) || defined (_M_X64) || defined (__i386__) || defined (_M_IX86)
+    unsigned old;
+    FlushDenormals() noexcept : old (static_cast<unsigned> (_mm_getcsr()))
+    {
+        _mm_setcsr (old | 0x8040u);
+    }
+    ~FlushDenormals() noexcept { _mm_setcsr (old); }
+#elif defined (__aarch64__)
+    std::uint64_t old;
+    FlushDenormals() noexcept
+    {
+        std::uint64_t fpcr = 0;
+        asm volatile ("mrs %0, fpcr" : "=r"(fpcr));
+        old = fpcr;
+        asm volatile ("msr fpcr, %0" :: "r"(fpcr | (std::uint64_t (1) << 24)));
+    }
+    ~FlushDenormals() noexcept
+    {
+        asm volatile ("msr fpcr, %0" :: "r"(old));
+    }
+#else
+    FlushDenormals() noexcept {}
+#endif
+};
 
 double midiFreq (double note)
 {
@@ -659,6 +695,7 @@ void PsyEngine::process (const Block& block, const MidiIn* midi, int midiCount, 
     if (block.numSamples <= 0 || block.bpm <= 0.0 || block.sampleRate <= 0.0)
         return;
 
+    const FlushDenormals flushDenormals;
     renderRate = block.sampleRate;
 
     for (int e = 0; e < kEngineCount; ++e)
