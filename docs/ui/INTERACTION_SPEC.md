@@ -18,7 +18,7 @@ Rolling primary controls: cutoff, envelope amount, filter decay, amp decay. Phas
 
 Click a step to select it; double-click toggles enabled state. Space toggles the selected step when the grid has keyboard focus. Arrow keys move selection. Explicit on/off control in the inspector provides an alternative to double-click. Pattern edits support undo/redo and do not change the current engine selection unexpectedly.
 
-Rolling INIT demonstrates the product in one glance: hold a MIDI root, or enable LATCH and play a root, then the host-synced roll produces the kick–bass–bass–bass line with ducking. With no held notes and LATCH off, all SEQ lanes stay silent. LATCH clears on a new note-on set, when switched off, on CC123, and on transport stop. Rolling INIT has exactly 12 enabled steps: 2,3,4,6,7,8,10,11,12,14,15,16. Sliding and FX start disabled with empty lanes. The draft uses architecture v0.1 values, including 50% gate and 70 ms amp decay. Architecture revision 0.1.1 specifies amp A 0.5 ms / D 70 ms / S 0% / R 12 ms, with D and R measured to −60 dB of their span. At 145 BPM and 50% gate, release begins around 51.7 ms and reaches that threshold around 63.7 ms. This describes the amp envelope, not a guarantee about every downstream processing tail.
+Rolling INIT demonstrates the product in one glance: hold a MIDI root, or enable LATCH and play a root, then the host-synced roll produces the kick–bass–bass–bass line with ducking. With no held notes and LATCH off, all SEQ lanes stay silent. LATCH clears on a new note-on set, when switched off, on CC123, and on transport stop. Rolling INIT has exactly 12 enabled steps: 2,3,4,6,7,8,10,11,12,14,15,16. Sliding and FX start disabled with empty lanes. The draft uses architecture v0.1 values, including 50% gate and 70 ms amp decay. Merged architecture rev 0.1.5 §4.4 specifies amp A 0.5 ms / D 70 ms / S 0% / R 12 ms, with D and R measured to −60 dB of their span. At 145 BPM and 50% gate, release begins around 51.7 ms and reaches that threshold around 63.7 ms. This describes the amp envelope, not a guarantee about every downstream processing tail.
 
 SEQ uses held MIDI notes with the host-synchronized lane. MIDI bypasses that engine's lane but preserves its pattern; replace playhead with BYPASSED — MIDI. Engine enable, source and pattern presence remain separate states. Disabled engines retain editable parameters and patterns.
 
@@ -36,7 +36,7 @@ Duck exposes depth, release, curve and target toggles for Roll/Slide/FX. Source 
 
 SUB OWNER is ROLL / SLIDE / OFF. Each bass engine exposes LOW CUT AUTO / ON / OFF and its effective state. Shared non-owner cutoff is independent of MONO LOW. SUB OFF means no sine sub; AUTO low-cut becomes off on both bass engines. Explicit low-cut overrides, FX low-cut, mono-low and duck remain active. A quiet overlap indicator appears when both active bass engines are full-range.
 
-MONO LOW is described as stereo-width processing, not bass removal. Avoid promising unchanged sample waveform or zero phase change until the crossover implementation is validated.
+MONO LOW copy: “Stereo width below X Hz. Mono content untouched.” Architecture rev 0.1.5 §6.4 specifies a side-channel high-pass with the mid channel unchanged. This statement describes the MONO LOW stage only; it does not promise unchanged audio through the entire instrument or unchanged phase in the stereo difference signal.
 
 ## Controls and accessibility
 
