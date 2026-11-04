@@ -4,11 +4,22 @@
 
 #include <algorithm>
 
+namespace
+{
+constexpr int kMidiEventCapacity = 2048;
+
+bool keepsItsSlot (const psyb::MidiIn& event)
+{
+    return event.cc == 120 || event.cc == 123 || (event.cc < 0 && event.velocity <= 0);
+}
+} // namespace
+
 PsybAudioProcessor::PsybAudioProcessor()
     : AudioProcessor (BusesProperties()
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                           .withInput ("Sidechain", juce::AudioChannelSet::stereo(), false))
 {
+    midiEvents.reserve (static_cast<size_t> (kMidiEventCapacity));
 }
 
 PsybAudioProcessor::~PsybAudioProcessor() = default;
@@ -16,6 +27,7 @@ PsybAudioProcessor::~PsybAudioProcessor() = default;
 void PsybAudioProcessor::prepareToPlay (double, int)
 {
     engine.loadInit();
+    midiEvents.reserve (static_cast<size_t> (kMidiEventCapacity));
     setLatencySamples (psyb::hostReportedLatencySamples());
 }
 
@@ -88,7 +100,25 @@ void PsybAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         else
             continue;
 
-        midiEvents.push_back (event);
+        // Stay inside the reserved capacity. A full block keeps note-offs
+        // and the all-notes/all-sound controllers, and drops a note-on.
+        if (midiEvents.size() < midiEvents.capacity()
+            && static_cast<int> (midiEvents.size()) < kMidiEventCapacity)
+        {
+            midiEvents.push_back (event);
+            continue;
+        }
+
+        if (! keepsItsSlot (event))
+            continue;
+
+        for (int i = static_cast<int> (midiEvents.size()) - 1; i >= 0; --i)
+        {
+            if (keepsItsSlot (midiEvents[static_cast<size_t> (i)]))
+                continue;
+            midiEvents[static_cast<size_t> (i)] = event;
+            break;
+        }
     }
 
     if (output.getNumSamples() > 0)
