@@ -94,6 +94,7 @@ void PsyEngine::setLatch (bool on)
     nHeld = 0;
     for (int i = 0; i < downCount && nHeld < kMaxHeld; ++i)
         held[nHeld++] = down[i];
+    releaseOpenTies();
 }
 
 void PsyEngine::setDuckSource (DuckSource source) { duckSource = source; }
@@ -140,8 +141,7 @@ void PsyEngine::clearVoices()
         lanes[e].active = {};
         lanes[e].tail = {};
         lanes[e].pendingOff = false;
-        lanes[e].stealEnv = 0.f;
-        lanes[e].stealLeft = 0;
+        lanes[e].stolen = {};
         midiStackN[e] = 0;
     }
 }
@@ -249,7 +249,10 @@ void PsyEngine::noteOff (int sample, int channel, int note)
     }
 
     if (routed != 1)
+    {
+        releaseOpenTies();
         return;
+    }
 
     for (int e = 0; e < kEngineCount; ++e)
     {
@@ -283,6 +286,8 @@ void PsyEngine::noteOff (int sample, int channel, int note)
             lanes[e].active.releaseEnv = lanes[e].active.env;
         }
     }
+
+    releaseOpenTies();
 }
 
 void PsyEngine::allNotesOff (int, bool hard)
@@ -300,9 +305,8 @@ void PsyEngine::allNotesOff (int, bool hard)
     for (int e = 0; e < kEngineCount; ++e)
     {
         lanes[e].pendingOff = false;
-        lanes[e].stealLeft = 0;
         midiStackN[e] = 0;
-        Voice* slots[2] = { &lanes[e].active, &lanes[e].tail };
+        Voice* slots[3] = { &lanes[e].active, &lanes[e].tail, &lanes[e].stolen };
         for (auto* v : slots)
         {
             if (! v->used || v->releasing)
@@ -321,8 +325,29 @@ void PsyEngine::releaseEngine (int engine, int, bool seqOnly)
         return;
 
     lane.pendingOff = false;
-    if (lane.active.used && ! lane.active.releasing)
+    Voice* slots[3] = { &lane.active, &lane.tail, &lane.stolen };
+    for (auto* v : slots)
     {
+        if (! v->used || v->releasing)
+            continue;
+        v->releasing = true;
+        v->releaseLife = 0;
+        v->releaseEnv = v->env;
+    }
+}
+
+void PsyEngine::releaseOpenTies()
+{
+    if (nHeld > 0)
+        return;
+
+    for (int e = 0; e < kEngineCount; ++e)
+    {
+        auto& lane = lanes[e];
+        if (lane.cfg.source != SourceMode::Seq || lane.pendingOff)
+            continue;
+        if (! lane.active.used || lane.active.releasing)
+            continue;
         lane.active.releasing = true;
         lane.active.releaseLife = 0;
         lane.active.releaseEnv = lane.active.env;
@@ -397,21 +422,27 @@ void PsyEngine::startVoice (int engine, int sample, int note, bool retrigger, co
         return;
     }
 
-    // Two slots. A third onset steals the fading tail with a short ramp.
+    // Two audible slots, plus the stolen tail for one short ramp.
     // The new voice still starts on this sample.
     if (lane.tail.used)
     {
-        lane.stealEnv = static_cast<float> (lane.tail.env);
-        lane.stealLeft = samplesFor (kStealSec, renderRate);
+        lane.stolen = lane.tail;
+        lane.stolen.tail = true;
+        lane.stolen.releasing = true;
+        lane.stolen.releaseLife = 0;
+        lane.stolen.releaseEnv = lane.stolen.env;
+        lane.stolen.tailLeft = samplesFor (kStealSec, renderRate);
+        lane.stolen.fadeSpan = lane.stolen.tailLeft;
     }
     if (lane.active.used)
     {
         lane.tail = lane.active;
         lane.tail.tail = true;
-        lane.tail.tailLeft = samplesFor (kTailSec, renderRate);
         lane.tail.releasing = true;
         lane.tail.releaseLife = 0;
         lane.tail.releaseEnv = lane.tail.env;
+        lane.tail.tailLeft = samplesFor (kTailSec, renderRate);
+        lane.tail.fadeSpan = lane.tail.tailLeft;
     }
 
     lane.active = {};
@@ -451,26 +482,30 @@ void PsyEngine::fireStep (int engine, int64_t absoluteStep, int sample, double s
     const int note = clampMidi (arpNote + st.offset + lane.cfg.transpose);
     const double stepLen = std::max (0.0, endPpq - startPpq);
     const double stepMs = stepLen * 60000.0 / block.bpm;
-    const float fraction = st.glideOverride ? st.glidePercent : lane.cfg.seqGlide;
+    const int nextIndex = (patternIndex + 1) % length;
+    const bool tieHolds = st.tie && lane.steps[nextIndex].on && nHeld > 0;
+    const float fraction = st.glideOverride ? st.glideFraction : lane.cfg.seqGlide;
 
     GlideInfo glide {};
     if (prevTie)
     {
         glide.applies = true;
-        glide.requestedPercent = fraction;
+        glide.requestedFraction = fraction;
         glide.requestedMs = static_cast<float> (fraction * stepMs);
         const float gateFraction = st.tie ? 1.f : std::clamp (st.gate, 0.05f, 1.f);
         const float gateMs = static_cast<float> (gateFraction * stepMs);
         glide.effectiveMs = std::min (glide.requestedMs, gateMs);
-        glide.effectivePercent = stepMs > 0.0 ? glide.effectiveMs / static_cast<float> (stepMs) : 0.f;
+        glide.effectiveFraction = stepMs > 0.0 ? glide.effectiveMs / static_cast<float> (stepMs) : 0.f;
         glide.clamped = glide.requestedMs > gateMs + 0.01f;
     }
 
     startVoice (engine, sample, note, ! prevTie, glide, glide.effectiveMs);
 
-    if (! st.tie)
+    // A tie holds only when the next step is on. Otherwise the note ends
+    // at this step's end, including a rest at the pattern wrap.
+    if (! tieHolds)
     {
-        const float gate = std::clamp (st.gate, 0.05f, 1.f);
+        const float gate = st.tie ? 1.f : std::clamp (st.gate, 0.05f, 1.f);
         lane.pendingOff = true;
         lane.pendingOffPpq = startPpq + stepLen * static_cast<double> (gate);
     }
@@ -486,17 +521,10 @@ void PsyEngine::renderSample (float& out)
     for (int e = 0; e < kEngineCount; ++e)
     {
         auto& lane = lanes[e];
-        if (lane.stealLeft > 0)
-        {
-            const float g = static_cast<float> (lane.stealLeft) / static_cast<float> (samplesFor (kStealSec, renderRate));
-            out += lane.stealEnv * g * 0.2f;
-            --lane.stealLeft;
-        }
-
         if (! lane.cfg.enabled)
             continue;
 
-        Voice* slots[2] = { &lane.active, &lane.tail };
+        Voice* slots[3] = { &lane.active, &lane.tail, &lane.stolen };
         for (auto* v : slots)
         {
             if (! v->used)
@@ -530,8 +558,8 @@ void PsyEngine::renderSample (float& out)
 
             if (v->tail)
             {
-                const int tailN = samplesFor (kTailSec, renderRate);
-                const float g = std::clamp (static_cast<float> (v->tailLeft) / static_cast<float> (tailN), 0.f, 1.f);
+                const int span = std::max (1, v->fadeSpan);
+                const float g = std::clamp (static_cast<float> (v->tailLeft) / static_cast<float> (span), 0.f, 1.f);
                 sample *= 0.5f * (1.f - std::cos (g * 3.14159265f));
                 --v->tailLeft;
                 if (v->tailLeft <= 0)

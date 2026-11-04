@@ -58,16 +58,11 @@ void PsybAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         }
     }
 
-    psyb::MidiIn events[256];
-    int eventCount = 0;
+    midiEvents.clear();
     for (const auto meta : midi)
     {
-        if (eventCount >= 256)
-            break;
-
         const auto msg = meta.getMessage();
-        auto& event = events[eventCount];
-        event = {};
+        psyb::MidiIn event {};
         event.sample = meta.samplePosition;
         event.channel = std::clamp (msg.getChannel() - 1, 0, 15);
 
@@ -93,11 +88,14 @@ void PsybAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         else
             continue;
 
-        ++eventCount;
+        midiEvents.push_back (event);
     }
 
     if (output.getNumSamples() > 0)
-        engine.process (block, events, eventCount, output.getWritePointer (0));
+        engine.process (block,
+                        midiEvents.empty() ? nullptr : midiEvents.data(),
+                        static_cast<int> (midiEvents.size()),
+                        output.getWritePointer (0));
 
     if (output.getNumChannels() > 1)
         output.copyFrom (1, 0, output, 0, 0, output.getNumSamples());

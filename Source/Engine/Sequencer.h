@@ -23,7 +23,7 @@ struct Step
     bool accent = false;
     int offset = 0;
     bool glideOverride = false;
-    float glidePercent = 0.f;
+    float glideFraction = 0.f;
 };
 
 struct LaneConfig
@@ -59,9 +59,9 @@ struct Block
 
 struct GlideInfo
 {
-    float requestedPercent = 0.f;
+    float requestedFraction = 0.f;
     float requestedMs = 0.f;
-    float effectivePercent = 0.f;
+    float effectiveFraction = 0.f;
     float effectiveMs = 0.f;
     bool clamped = false;
     bool applies = false;
@@ -79,7 +79,8 @@ struct Trigger
 /** Step onset in quarter-notes. Odd steps are delayed by swing * rate / 2. */
 double stepStartPpq (int64_t stepIndex, double rateQuarters, double swing);
 
-/** First sample index at or after a PPQ, measured from ppqOrigin. */
+/** Sample index at or before this PPQ, measured from ppqOrigin.
+    The boundary sample belongs to the later block. */
 int sampleAtPpq (double ppq, double ppqOrigin, double bpm, double sampleRate);
 
 int clampMidi (int note);
@@ -128,6 +129,7 @@ private:
         int glidePos = 0;
         bool tail = false;
         int tailLeft = 0;
+        int fadeSpan = 1;
     };
 
     struct Arp
@@ -148,8 +150,7 @@ private:
         double pendingOffPpq = 0.0;
         SourceMode applied = SourceMode::Seq;
         int lastArpNote = 60;
-        float stealEnv = 0.f;
-        int stealLeft = 0;
+        Voice stolen {};
     };
 
     double renderRate = 48000.0;
@@ -160,6 +161,7 @@ private:
     void allNotesOff (int sample, bool hard);
     void fireStep (int engine, int64_t absoluteStep, int sample, double startPpq, double endPpq, const Block& block);
     void releaseEngine (int engine, int sample, bool seqOnly);
+    void releaseOpenTies();
     void startVoice (int engine, int sample, int note, bool retrigger, const GlideInfo& glide, float glideMs);
     void renderSample (float& out);
     int pickNote (int engine);

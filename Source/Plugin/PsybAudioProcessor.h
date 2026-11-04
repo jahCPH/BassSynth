@@ -3,6 +3,7 @@
 #include "Engine/Sequencer.h"
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <vector>
 
 /** Empty synth shell. Display name is PsyRoot.
     Bundle id, plugin code, and the manufacturer code are name-neutral.
@@ -38,6 +39,7 @@ public:
 
 private:
     psyb::PsyEngine engine;
+    std::vector<psyb::MidiIn> midiEvents;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PsybAudioProcessor)
 };

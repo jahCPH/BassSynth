@@ -1,6 +1,7 @@
 #include "Dsp/ReportedLatency.h"
 #include "Engine/Sequencer.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <vector>
 
@@ -334,7 +335,7 @@ int main()
             const auto& g = got[1].glide;
             CHECK (g.applies);
             CHECK (g.clamped);
-            CHECK (g.requestedPercent > g.effectivePercent);
+            CHECK (g.requestedFraction > g.effectiveFraction);
             CHECK (g.effectiveMs < g.requestedMs);
             CHECK (! got[0].glide.applies);
         }
@@ -476,21 +477,115 @@ int main()
             CHECK (t.engine == 0);
     }
 
-    // A3.
+    // A tie into a rest, including the pattern wrap, ends the note.
+    {
+        psyb::PsyEngine engine;
+        engine.loadInit();
+        for (int i = 0; i < psyb::kMaxSteps; ++i)
+        {
+            psyb::Step step {};
+            step.on = (i == 0);
+            step.tie = (i == 0);
+            step.gate = 0.5f;
+            step.velocity = 100;
+            engine.setStep (0, i, step);
+        }
+        noteOn (engine, 60);
+        psyb::Block first { 48000.0, 145.0, 0.0, 64, true };
+        engine.process (first, nullptr, 0, nullptr);
+        CHECK (engine.voiceActive (0));
+        psyb::Block rest { 48000.0, 145.0, 0.25, 64, true };
+        engine.process (rest, nullptr, 0, nullptr);
+        CHECK (! engine.voiceActive (0));
+    }
+    {
+        psyb::PsyEngine engine;
+        engine.loadInit();
+        auto cfg = engine.lane (0);
+        cfg.length = 4;
+        engine.setLane (0, cfg);
+        for (int i = 0; i < 4; ++i)
+        {
+            psyb::Step step {};
+            step.on = (i == 3);
+            step.tie = (i == 3);
+            step.gate = 0.5f;
+            step.velocity = 100;
+            engine.setStep (0, i, step);
+        }
+        noteOn (engine, 60);
+        const auto got = playSteps (engine, 5, 128, 48000.0, 145.0);
+        CHECK (! got.empty());
+        CHECK (! engine.voiceActive (0));
+    }
+    {
+        psyb::PsyEngine engine;
+        engine.loadInit();
+        for (int i = 0; i < 2; ++i)
+        {
+            psyb::Step step {};
+            step.on = true;
+            step.tie = (i == 0);
+            step.gate = 1.f;
+            step.velocity = 100;
+            engine.setStep (0, i, step);
+        }
+        noteOn (engine, 60);
+        psyb::Block first { 48000.0, 145.0, 0.0, 64, true };
+        engine.process (first, nullptr, 0, nullptr);
+        CHECK (engine.voiceActive (0));
+        psyb::MidiIn off {};
+        off.note = 60;
+        engine.process (first, &off, 1, nullptr);
+        CHECK (! engine.voiceActive (0));
+    }
+
+    // A3. PPQ advances, and the run ends on matching note-offs only.
     {
         psyb::PsyEngine engine;
         engine.loadInit();
         allOn (engine);
+        psyb::Step tied {};
+        tied.on = true;
+        tied.tie = true;
+        tied.gate = 0.5f;
+        tied.velocity = 100;
+        engine.setStep (0, 4, tied);
+        psyb::Step rest {};
+        rest.velocity = 100;
+        engine.setStep (0, 5, rest);
+
+        struct Key { int channel; int note; };
+        std::vector<Key> live;
+        auto remember = [&] (int channel, int note)
+        {
+            for (const auto& key : live)
+                if (key.channel == channel && key.note == note)
+                    return;
+            live.push_back ({ channel, note });
+        };
+        auto forget = [&] (int channel, int note)
+        {
+            live.erase (std::remove_if (live.begin(), live.end(), [&] (const Key& key)
+            {
+                return key.channel == channel && key.note == note;
+            }), live.end());
+        };
+
         uint32_t rng = 1;
+        double ppq = 0.0;
+        const double sr = 48000.0;
+        const double bpm = 145.0;
+        const int blockSize = 32;
         for (int i = 0; i < 10000; ++i)
         {
             rng = rng * 1664525u + 1013904223u;
             const int kind = static_cast<int> (rng % 7u);
             psyb::Block block;
-            block.sampleRate = 48000.0;
-            block.bpm = 145.0;
-            block.ppqStart = 0.0;
-            block.numSamples = 32;
+            block.sampleRate = sr;
+            block.bpm = bpm;
+            block.ppqStart = ppq;
+            block.numSamples = blockSize;
             block.playing = (rng & 8u) != 0;
 
             psyb::MidiIn ev {};
@@ -500,15 +595,20 @@ int main()
             ev.velocity = 100;
 
             if (kind == 0)
+            {
+                remember (ev.channel, ev.note);
                 engine.process (block, &ev, 1, nullptr);
+            }
             else if (kind == 1)
             {
                 ev.velocity = 0;
+                forget (ev.channel, ev.note);
                 engine.process (block, &ev, 1, nullptr);
             }
             else if (kind == 2)
             {
                 ev.cc = 123;
+                live.clear();
                 engine.process (block, &ev, 1, nullptr);
             }
             else if (kind == 3)
@@ -533,15 +633,34 @@ int main()
                 block.playing = false;
                 engine.process (block, nullptr, 0, nullptr);
             }
+
+            ppq += static_cast<double> (blockSize) * bpm / (sr * 60.0);
         }
 
-        psyb::MidiIn end {};
-        end.cc = 123;
-        psyb::Block done { 48000.0, 145.0, 0.0, 8, true };
-        engine.process (done, &end, 1, nullptr);
-        psyb::Block quiet { 48000.0, 145.0, 0.0, 8000, false };
-        engine.process (quiet, nullptr, 0, nullptr);
-        CHECK (engine.soundingVoices() == 0);
+        engine.setLatch (false);
+        for (size_t i = 0; i < live.size();)
+        {
+            psyb::MidiIn offs[32] = {};
+            int count = 0;
+            while (i < live.size() && count < 32)
+            {
+                offs[count].channel = live[i].channel;
+                offs[count].note = live[i].note;
+                ++count;
+                ++i;
+            }
+            psyb::Block block { sr, bpm, ppq, blockSize, true };
+            engine.process (block, offs, count, nullptr);
+            ppq += static_cast<double> (blockSize) * bpm / (sr * 60.0);
+        }
+
+        const int runoutSamples = static_cast<int> (sr * 60.0 * 4.0 / bpm);
+        psyb::Block runout { sr, bpm, ppq, runoutSamples, true };
+        engine.process (runout, nullptr, 0, nullptr);
+
+        CHECK (engine.heldCount() == 0);
+        for (int e = 0; e < psyb::kEngineCount; ++e)
+            CHECK (! engine.voiceActive (e));
         bool anyRoute = false;
         for (int ch = 0; ch < 16 && ! anyRoute; ++ch)
             for (int n = 0; n < 128; ++n)
