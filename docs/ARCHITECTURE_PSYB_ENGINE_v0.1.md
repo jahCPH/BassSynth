@@ -9,6 +9,7 @@ step glide FOLLOW/OVERRIDE, parameter table completed (draft IDs), duck NO BUS v
 **Rev 0.1.2:** MONO LOW redesigned as a side-channel high-pass (transparent for mono by construction), QUALITY
 placement noted. Prompted by Astra's UI study 02 caveat.
 **Rev 0.1.3:** L1 decided by Linus (2026-11-04): 7-day trial + Moonbase licensing, no separate beta expiry.
+**Rev 0.1.6:** filter-decay IDs normalised to `*_fdec` (matches `*_adec`); no `*_fdecay`/`*_adecay` IDs exist.
 **Rev 0.1.5:** product name is **PsyRoot** (display only; identifiers stay name-neutral). "Psy.b" below = PsyRoot.
 **Rev 0.1.4:** Q1–Q3 decided by Linus (2026-11-04): arp order list, LATCH added, per-step pitch offset kept,
 per-lane transpose added, per-lane arp index.
@@ -304,7 +305,7 @@ IDs are stable once shipped (state compatibility). Prefix: `r_` Rolling, `s_` Sl
 | r_cutoff / s_cutoff | 20–20k | 900 / 1.2k | Hz |
 | r_reso / s_reso | 0–100 | 20 / 45 | % |
 | r_envamt / s_envamt | −100…100 | 60 / 50 | % |
-| r_fdecay / s_fdecay / f_fdecay | 5 ms–4 s | 60 / 250 / 400 | ms (= *_fdec) |
+| r_fdec / s_fdec / f_fdec | 5 ms–4 s | 60 / 250 / 400 | ms (filter decay) |
 | r_drive / s_drive / f_drive | 0–100 | 15 / 15 / 0 | % |
 | s_accent | 0–100 | 50 | % |
 | f_fm / f_formant / f_movement | 0–100 | 30 / 50 / 40 | % |
