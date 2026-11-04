@@ -9,6 +9,8 @@ step glide FOLLOW/OVERRIDE, parameter table completed (draft IDs), duck NO BUS v
 **Rev 0.1.2:** MONO LOW redesigned as a side-channel high-pass (transparent for mono by construction), QUALITY
 placement noted. Prompted by Astra's UI study 02 caveat.
 **Rev 0.1.3:** L1 decided by Linus (2026-11-04): 7-day trial + Moonbase licensing, no separate beta expiry.
+**Rev 0.1.4:** Q1–Q3 decided by Linus (2026-11-04): arp order list, LATCH added, per-step pitch offset kept,
+per-lane transpose added, per-lane arp index.
 
 Everything below marked **(proposal)** is not yet approved by Linus. Lines marked **(Cursor to validate)** are
 behaviour specs whose implementation strategy is Cursor's call.
@@ -116,12 +118,18 @@ movement, optional width stage). MONO LOW therefore mostly guards FX and master 
 
 ### 3.4 Arp (SEQ mode pitch source)
 - Input: held-note set (ordered by arrival, max 16 notes).
-- Order: UP / DOWN / UP-DOWN / AS PLAYED / RANDOM (default UP). (interpretation, Linus to confirm)
+- Order: UP / DOWN / UP-DOWN / AS PLAYED / RANDOM (default UP). **Decided** (Q1). No Converge/Diverge/Chord
+  modes: with a mono bass they add nothing.
+- **LATCH** (default OFF): held notes stay in the held-note set after release until a new note-on (starts a new
+  set) or LATCH off / CC123 / transport stop clears it. One tap on the root keeps the roll going.
 - The arp advances **once per step that triggers a new note** (not on tied steps, not on rests).
-- **Recommended: one arp index per lane** (consistent with independent lane rate/length), with one shared ARP
-  ORDER. **Pending Linus** (Q3).
-- Nothing held → lanes trigger nothing (silent). (interpretation)
-- Per-step **pitch offset** (−24…+24 st) is added to the arp note.
+- **One arp index per lane**, one shared ARP ORDER. **Decided** (Q3); lanes have independent rate/length, so a
+  shared index would drift.
+- Later, not v1: per-step probability and a per-step expression lane (useful for FX).
+- Nothing held (and LATCH off or empty) → lanes trigger nothing (silent). **Decided** (Q1).
+- Per-step **pitch offset** (−24…+24 st) is added to the arp note. **Decided** (Q2): unlike index-based arps
+  (e.g. Serum 2), offsets are what make a single held root move (octave jumps, fifths, 303-style lines).
+- Per-lane **TRANSPOSE** (−24…+24 st, default 0) is added on top: note = arp note + step offset + lane transpose.
 
 ### 3.5 Step model (per lane, per step)
 | Field | Range | Default | Notes |
@@ -318,6 +326,8 @@ IDs are stable once shipped (state compatibility). Prefix: `r_` Rolling, `s_` Sl
 | b_quality | NORMAL/HIGH | NORMAL | 2x / 4x |
 | q_swing | 0–75 | 0 | % |
 | q_arp_order | UP/DOWN/UPDOWN/PLAYED/RANDOM | UP | |
+| q_latch | bool | OFF | |
+| q_r_transpose / q_s_transpose / q_f_transpose | −24…+24 | 0 | st |
 | q_r_rate / q_s_rate / q_f_rate | 1/8…1/32, triplets | 1/16 | per lane |
 | q_r_len / q_s_len / q_f_len | 1–16 | 16 | steps |
 | q_r_swingmode / … | FOLLOW / OWN | FOLLOW | per lane |
@@ -392,9 +402,9 @@ Not reused: Metal renderer, Gate, Aggregator, InstanceHub, VizuatorTokens.
 | # | Question | Owner |
 |---|---|---|
 | L1 | ~~Beta or trial~~ decided 2026-11-04: **7-day trial + Moonbase**, no beta expiry | — |
-| Q1 | Arp order list and "nothing held = silent" — confirm | Linus |
-| Q2 | Per-step pitch offset on top of the arp note — confirm | Linus |
-| Q3 | One arp index per lane (recommended) vs. one shared | Linus |
+| Q1 | ~~Arp orders / silent~~ decided 2026-11-04 (+ LATCH) | — |
+| Q2 | ~~Per-step pitch offset~~ decided 2026-11-04: kept, + per-lane transpose | — |
+| Q3 | ~~Arp index~~ decided 2026-11-04: per lane | — |
 | Q4 | ~~Direct-MIDI glide units~~ resolved 0.1.1: own stored ms value | — |
 | Q5 | Bounded third-note retrigger strategy | Cursor |
 | Q6 | Oversampling filter type and CPU budget | Cursor |
