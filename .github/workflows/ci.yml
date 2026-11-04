@@ -1,0 +1,70 @@
+# BassSynth CI — headless DSP tests and an AU+VST3 compile check.
+#
+# JUCE: locally ThirdParty/JUCE symlinks to ../MyJUCE. CI clones JUCE at
+# JUCE_REF and passes -DJUCE_PATH. arm64 only; release builds stay universal
+# via the CMake default.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  JUCE_REF: "8.0.12"
+
+jobs:
+  tests:
+    name: Unit tests (macOS)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout JUCE
+        uses: actions/checkout@v4
+        with:
+          repository: juce-framework/JUCE
+          ref: ${{ env.JUCE_REF }}
+          path: juce
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DJUCE_PATH="${GITHUB_WORKSPACE}/juce" \
+            -DBASSSYNTH_DEV_PATHS=OFF \
+            -DBASSSYNTH_BUILD_TESTS=ON
+
+      - name: Build tests
+        run: cmake --build build --target BassSynthTests -j3
+
+      - name: Run tests
+        run: ./build/BassSynthTests
+
+  build:
+    name: Plugin build (macOS)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout JUCE
+        uses: actions/checkout@v4
+        with:
+          repository: juce-framework/JUCE
+          ref: ${{ env.JUCE_REF }}
+          path: juce
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=arm64 \
+            -DJUCE_PATH="${GITHUB_WORKSPACE}/juce" \
+            -DBASSSYNTH_DEV_PATHS=OFF \
+            -DBASSSYNTH_BUILD_TESTS=OFF
+
+      - name: Build AU and VST3
+        run: cmake --build build --target BassSynth_All -j3
