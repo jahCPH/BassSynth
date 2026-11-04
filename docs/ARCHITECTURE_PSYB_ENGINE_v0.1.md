@@ -8,6 +8,7 @@
 step glide FOLLOW/OVERRIDE, parameter table completed (draft IDs), duck NO BUS vs SILENT.
 **Rev 0.1.2:** MONO LOW redesigned as a side-channel high-pass (transparent for mono by construction), QUALITY
 placement noted. Prompted by Astra's UI study 02 caveat.
+**Rev 0.1.3:** L1 decided by Linus (2026-11-04): 7-day trial + Moonbase licensing, no separate beta expiry.
 
 Everything below marked **(proposal)** is not yet approved by Linus. Lines marked **(Cursor to validate)** are
 behaviour specs whose implementation strategy is Cursor's call.
@@ -22,8 +23,8 @@ a host-synced step sequencer/arp per engine, and a shared bus (duck, sub ownersh
 In scope for v0.1: audio graph, event/timing model, voice model, DSP blocks per engine, bus, parameter list
 with defaults, state, UI data contract, test hooks.
 
-Not in scope: visual layout (Astra), build/release (Cursor, reusing Vizuator's process), licensing model
-(open question L1).
+Not in scope: visual layout (Astra), build/release (Cursor, reusing Vizuator's process). Licensing is decided
+(L1: 7-day trial + Moonbase); its implementation is Cursor's and stays off the audio thread.
 
 ---
 
@@ -380,7 +381,9 @@ Pattern data (steps) is **not** APVTS; it is stored in the state blob (§10) and
 ## 12. Reuse from The Vizuator (read-only source; copy + rename into this repo)
 Build skeleton (CMake/JUCE 8.0.12, AU+VST3, universal), scripts, CI, release gate, `AudioRingBuffer`,
 `BiquadFilter` (static HPF / low cut / crossover only), `TransientDetector` (AUDIO duck base),
-`PluginStateSanitize` pattern, beta-expiry code from `release/0.9.0-beta.1` if L1 = beta.
+`PluginStateSanitize` pattern. Vizuator's beta-expiry code is **not** reused (L1 = 7-day trial + Moonbase).
+Engine constraint from L1: the licence/trial state is read on the message thread only; the audio thread sees
+one atomic `licensed` flag and never blocks on licence checks.
 Not reused: Metal renderer, Gate, Aggregator, InstanceHub, VizuatorTokens.
 
 ---
@@ -388,7 +391,7 @@ Not reused: Metal renderer, Gate, Aggregator, InstanceHub, VizuatorTokens.
 ## 13. Open questions
 | # | Question | Owner |
 |---|---|---|
-| L1 | Beta (10 days, like Vizuator) or straight to the 7-day trial + Moonbase? | Linus |
+| L1 | ~~Beta or trial~~ decided 2026-11-04: **7-day trial + Moonbase**, no beta expiry | — |
 | Q1 | Arp order list and "nothing held = silent" — confirm | Linus |
 | Q2 | Per-step pitch offset on top of the arp note — confirm | Linus |
 | Q3 | One arp index per lane (recommended) vs. one shared | Linus |
