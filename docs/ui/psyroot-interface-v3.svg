@@ -1,0 +1,276 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1000" viewBox="0 0 1440 1000">
+<rect x="0" y="0" width="1440" height="1000" rx="0" fill="#0A0A0A" stroke="#0A0A0A"/>
+<text x="32" y="57" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="38" font-weight="600">PsyRoot</text>
+<text x="213" y="55" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">42CODON</text>
+<text x="375" y="32" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">PRESET</text>
+<text x="375" y="57" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="18" font-weight="400">INIT / ROLLING</text>
+<text x="710" y="32" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">HOST</text>
+<text x="710" y="57" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="18" font-weight="400">145 BPM</text>
+<text x="865" y="32" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">MIDI IN</text>
+<text x="865" y="57" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="18" font-weight="400">IDLE</text>
+<text x="1045" y="32" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">TRIAL</text>
+<text x="1045" y="57" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="16" font-weight="400">7 DAYS LEFT</text>
+<rect x="1267" y="29" width="141" height="28" rx="4" fill="#171717" stroke="#323232"/>
+<text x="1277" y="48" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">ACTIVATE →</text>
+<path d="M32 85H1408" fill="none" stroke="#323232" stroke-width="1"/>
+<text x="32" y="126" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="28" font-weight="600">Pattern</text>
+<rect x="228" y="103" width="164" height="28" rx="4" fill="#171717" stroke="#323232"/>
+<text x="238" y="122" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">ORDER  UP ▾</text>
+<rect x="408" y="103" width="140" height="28" rx="4" fill="#171717" stroke="#323232"/>
+<text x="418" y="122" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">LATCH  OFF</text>
+<text x="581" y="122" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">SWING  0%</text>
+<text x="790" y="122" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">HOST SYNC</text>
+<text x="1035" y="122" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">HOLD A ROOT NOTE TO PLAY</text>
+<text x="32" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">16 STEPS / 1 BAR</text>
+<text x="280" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">1</text>
+<path d="M251 175V424" fill="none" stroke="#454541" stroke-width="1"/>
+<text x="351" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">2</text>
+<text x="422" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">3</text>
+<text x="493" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">4</text>
+<text x="564" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">5</text>
+<path d="M535 175V424" fill="none" stroke="#454541" stroke-width="1"/>
+<text x="635" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">6</text>
+<text x="706" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">7</text>
+<text x="777" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">8</text>
+<text x="848" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">9</text>
+<path d="M819 175V424" fill="none" stroke="#454541" stroke-width="1"/>
+<text x="919" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">10</text>
+<text x="990" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">11</text>
+<text x="1061" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">12</text>
+<text x="1132" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">13</text>
+<path d="M1103 175V424" fill="none" stroke="#454541" stroke-width="1"/>
+<text x="1203" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">14</text>
+<text x="1274" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">15</text>
+<text x="1345" y="166" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">16</text>
+<text x="32" y="202" fill="#BACB9B" font-family="Arial,sans-serif" font-size="16" font-weight="600">01 / ROLLING</text>
+<text x="32" y="224" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">ON · SEQ</text>
+<rect x="32" y="232" width="193" height="28" rx="4" fill="#171717" stroke="#323232"/>
+<text x="42" y="251" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">TRANSPOSE  +0 st</text>
+<rect x="256" y="183" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="327" y="183" width="64" height="42" rx="4" fill="#BECDA5" stroke="#F4F4F2"/>
+<text x="340" y="209" fill="#101010" font-family="Menlo,monospace" font-size="14" font-weight="400">+0</text>
+<path d="M335 218H383" fill="none" stroke="#536044" stroke-width="2"/>
+<rect x="398" y="183" width="64" height="42" rx="4" fill="#BECDA5" stroke="#323232"/>
+<text x="411" y="209" fill="#101010" font-family="Menlo,monospace" font-size="14" font-weight="400">+0</text>
+<path d="M406 218H454" fill="none" stroke="#536044" stroke-width="2"/>
+<rect x="469" y="183" width="64" height="42" rx="4" fill="#BECDA5" stroke="#323232"/>
+<text x="482" y="209" fill="#101010" font-family="Menlo,monospace" font-size="14" font-weight="400">+0</text>
+<path d="M477 218H525" fill="none" stroke="#536044" stroke-width="2"/>
+<rect x="540" y="183" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="611" y="183" width="64" height="42" rx="4" fill="#BECDA5" stroke="#323232"/>
+<text x="624" y="209" fill="#101010" font-family="Menlo,monospace" font-size="14" font-weight="400">+0</text>
+<path d="M619 218H667" fill="none" stroke="#536044" stroke-width="2"/>
+<rect x="682" y="183" width="64" height="42" rx="4" fill="#BECDA5" stroke="#323232"/>
+<text x="695" y="209" fill="#101010" font-family="Menlo,monospace" font-size="14" font-weight="400">+0</text>
+<path d="M690 218H738" fill="none" stroke="#536044" stroke-width="2"/>
+<rect x="753" y="183" width="64" height="42" rx="4" fill="#BECDA5" stroke="#323232"/>
+<text x="766" y="209" fill="#101010" font-family="Menlo,monospace" font-size="14" font-weight="400">+0</text>
+<path d="M761 218H809" fill="none" stroke="#536044" stroke-width="2"/>
+<rect x="824" y="183" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="895" y="183" width="64" height="42" rx="4" fill="#BECDA5" stroke="#323232"/>
+<text x="908" y="209" fill="#101010" font-family="Menlo,monospace" font-size="14" font-weight="400">+0</text>
+<path d="M903 218H951" fill="none" stroke="#536044" stroke-width="2"/>
+<rect x="966" y="183" width="64" height="42" rx="4" fill="#BECDA5" stroke="#323232"/>
+<text x="979" y="209" fill="#101010" font-family="Menlo,monospace" font-size="14" font-weight="400">+0</text>
+<path d="M974 218H1022" fill="none" stroke="#536044" stroke-width="2"/>
+<rect x="1037" y="183" width="64" height="42" rx="4" fill="#BECDA5" stroke="#323232"/>
+<text x="1050" y="209" fill="#101010" font-family="Menlo,monospace" font-size="14" font-weight="400">+0</text>
+<path d="M1045 218H1093" fill="none" stroke="#536044" stroke-width="2"/>
+<rect x="1108" y="183" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="1179" y="183" width="64" height="42" rx="4" fill="#BECDA5" stroke="#323232"/>
+<text x="1192" y="209" fill="#101010" font-family="Menlo,monospace" font-size="14" font-weight="400">+0</text>
+<path d="M1187 218H1235" fill="none" stroke="#536044" stroke-width="2"/>
+<rect x="1250" y="183" width="64" height="42" rx="4" fill="#BECDA5" stroke="#323232"/>
+<text x="1263" y="209" fill="#101010" font-family="Menlo,monospace" font-size="14" font-weight="400">+0</text>
+<path d="M1258 218H1306" fill="none" stroke="#536044" stroke-width="2"/>
+<rect x="1321" y="183" width="64" height="42" rx="4" fill="#BECDA5" stroke="#323232"/>
+<text x="1334" y="209" fill="#101010" font-family="Menlo,monospace" font-size="14" font-weight="400">+0</text>
+<path d="M1329 218H1377" fill="none" stroke="#536044" stroke-width="2"/>
+<text x="256" y="248" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">RATE 1/16    LENGTH 16    SWING GLOBAL · 0%</text>
+<text x="858" y="248" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">12 HITS · NO HELD NOTE</text>
+<text x="32" y="282" fill="#91BDBB" font-family="Arial,sans-serif" font-size="16" font-weight="600">02 / SLIDING</text>
+<text x="32" y="304" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">OFF · SEQ</text>
+<rect x="32" y="312" width="193" height="28" rx="4" fill="#171717" stroke="#323232"/>
+<text x="42" y="331" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">TRANSPOSE  +0 st</text>
+<rect x="256" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="327" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="398" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="469" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="540" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="611" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="682" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="753" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="824" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="895" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="966" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="1037" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="1108" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="1179" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="1250" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="1321" y="263" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<text x="256" y="328" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">RATE 1/16    LENGTH 16    SWING GLOBAL · 0%</text>
+<text x="858" y="328" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">EMPTY PATTERN · ENGINE OFF</text>
+<text x="32" y="362" fill="#B5A8C7" font-family="Arial,sans-serif" font-size="16" font-weight="600">03 / FX</text>
+<text x="32" y="384" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">OFF · SEQ</text>
+<rect x="32" y="392" width="193" height="28" rx="4" fill="#171717" stroke="#323232"/>
+<text x="42" y="411" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">TRANSPOSE  +0 st</text>
+<rect x="256" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="327" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="398" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="469" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="540" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="611" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="682" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="753" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="824" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="895" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="966" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="1037" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="1108" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="1179" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="1250" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<rect x="1321" y="343" width="64" height="42" rx="4" fill="#111111" stroke="#323232"/>
+<text x="256" y="408" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">RATE 1/16    LENGTH 16    SWING GLOBAL · 0%</text>
+<text x="858" y="408" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">EMPTY PATTERN · ENGINE OFF</text>
+<rect x="32" y="439" width="1376" height="74" rx="4" fill="#101010" stroke="#323232"/>
+<text x="48" y="462" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">ROLL / STEP 02</text>
+<rect x="48" y="475" width="90" height="28" rx="4" fill="#F4F4F2" stroke="#323232"/>
+<text x="58" y="494" fill="#0A0A0A" font-family="Menlo,monospace" font-size="12" font-weight="400">ON</text>
+<text x="175" y="462" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">OFFSET</text>
+<text x="175" y="494" fill="#F4F4F2" font-family="Menlo,monospace" font-size="16" font-weight="400">+0 st</text>
+<text x="300" y="462" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">GATE</text>
+<text x="300" y="494" fill="#F4F4F2" font-family="Menlo,monospace" font-size="16" font-weight="400">50%</text>
+<text x="400" y="462" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">VELOCITY</text>
+<text x="400" y="494" fill="#F4F4F2" font-family="Menlo,monospace" font-size="16" font-weight="400">100</text>
+<text x="530" y="462" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">ACCENT</text>
+<text x="530" y="494" fill="#F4F4F2" font-family="Menlo,monospace" font-size="16" font-weight="400">OFF</text>
+<text x="650" y="462" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">TIE</text>
+<text x="650" y="494" fill="#F4F4F2" font-family="Menlo,monospace" font-size="16" font-weight="400">OFF</text>
+<text x="755" y="462" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">GLIDE</text>
+<text x="755" y="494" fill="#F4F4F2" font-family="Menlo,monospace" font-size="14" font-weight="400">FOLLOW LANE ▾</text>
+<text x="1010" y="462" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">EFFECTIVE GLIDE</text>
+<text x="1010" y="494" fill="#F4F4F2" font-family="Menlo,monospace" font-size="16" font-weight="400">—</text>
+<text x="1220" y="462" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">NOTE</text>
+<text x="1220" y="494" fill="#F4F4F2" font-family="Menlo,monospace" font-size="16" font-weight="400">—</text>
+<rect x="32" y="532" width="448" height="266" rx="4" fill="#101010" stroke="#323232"/>
+<text x="48" y="562" fill="#BACB9B" font-family="Arial,sans-serif" font-size="22" font-weight="600">Rolling</text>
+<rect x="354" y="545" width="110" height="28" rx="4" fill="#F4F4F2" stroke="#323232"/>
+<text x="364" y="564" fill="#0A0A0A" font-family="Menlo,monospace" font-size="12" font-weight="400">ON</text>
+<text x="48" y="591" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">SOURCE</text>
+<rect x="117" y="573" width="65" height="28" rx="4" fill="#F4F4F2" stroke="#323232"/>
+<text x="127" y="592" fill="#0A0A0A" font-family="Menlo,monospace" font-size="12" font-weight="400">SEQ</text>
+<text x="195" y="592" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">MIDI</text>
+<text x="332" y="592" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">LEVEL 0 dB</text>
+<circle cx="89" cy="633" r="19" fill="#141414" stroke="#60605C"/>
+<path d="M89 617V627" fill="none" stroke="#F4F4F2" stroke-width="2"/>
+<text x="48" y="670" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">CUTOFF</text>
+<text x="48" y="694" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="16" font-weight="400">900 Hz</text>
+<circle cx="197" cy="633" r="19" fill="#141414" stroke="#60605C"/>
+<path d="M197 617V627" fill="none" stroke="#F4F4F2" stroke-width="2"/>
+<text x="156" y="670" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">ENV AMT</text>
+<text x="156" y="694" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="16" font-weight="400">60%</text>
+<circle cx="305" cy="633" r="19" fill="#141414" stroke="#60605C"/>
+<path d="M305 617V627" fill="none" stroke="#F4F4F2" stroke-width="2"/>
+<text x="264" y="670" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">FILTER D</text>
+<text x="264" y="694" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="16" font-weight="400">60 ms</text>
+<circle cx="413" cy="633" r="19" fill="#141414" stroke="#60605C"/>
+<path d="M413 617V627" fill="none" stroke="#F4F4F2" stroke-width="2"/>
+<text x="372" y="670" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">AMP D</text>
+<text x="372" y="694" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="16" font-weight="400">70 ms</text>
+<path d="M48 728H464" fill="none" stroke="#323232" stroke-width="1"/>
+<text x="48" y="752" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">PHASE RESET ON · FILTER RESET ON</text>
+<text x="48" y="781" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">LOW CUT AUTO → OFF</text>
+<text x="382" y="781" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">DETAILS</text>
+<rect x="496" y="532" width="448" height="266" rx="4" fill="#101010" stroke="#323232"/>
+<text x="512" y="562" fill="#91BDBB" font-family="Arial,sans-serif" font-size="22" font-weight="600">Sliding</text>
+<rect x="818" y="545" width="110" height="28" rx="4" fill="#171717" stroke="#323232"/>
+<text x="828" y="564" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">OFF</text>
+<text x="512" y="591" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">SOURCE</text>
+<rect x="581" y="573" width="65" height="28" rx="4" fill="#F4F4F2" stroke="#323232"/>
+<text x="591" y="592" fill="#0A0A0A" font-family="Menlo,monospace" font-size="12" font-weight="400">SEQ</text>
+<text x="659" y="592" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">MIDI</text>
+<text x="796" y="592" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">LEVEL 0 dB</text>
+<circle cx="553" cy="633" r="19" fill="#141414" stroke="#60605C"/>
+<path d="M553 617V627" fill="none" stroke="#F4F4F2" stroke-width="2"/>
+<text x="512" y="670" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">CUTOFF</text>
+<text x="512" y="694" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="16" font-weight="400">1.20 kHz</text>
+<circle cx="661" cy="633" r="19" fill="#141414" stroke="#60605C"/>
+<path d="M661 617V627" fill="none" stroke="#F4F4F2" stroke-width="2"/>
+<text x="620" y="670" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">RESONANCE</text>
+<text x="620" y="694" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="16" font-weight="400">45%</text>
+<circle cx="769" cy="633" r="19" fill="#141414" stroke="#60605C"/>
+<path d="M769 617V627" fill="none" stroke="#F4F4F2" stroke-width="2"/>
+<text x="728" y="670" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">GLIDE SEQ</text>
+<text x="728" y="694" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="16" font-weight="400">40%</text>
+<circle cx="877" cy="633" r="19" fill="#141414" stroke="#60605C"/>
+<path d="M877 617V627" fill="none" stroke="#F4F4F2" stroke-width="2"/>
+<text x="836" y="670" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">ACCENT</text>
+<text x="836" y="694" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="16" font-weight="400">50%</text>
+<text x="728" y="714" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">≈41 ms</text>
+<path d="M512 728H928" fill="none" stroke="#323232" stroke-width="1"/>
+<text x="512" y="752" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">LEGATO · TIED NOTES ONLY</text>
+<text x="512" y="781" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">LOW CUT AUTO → ON · 100 Hz</text>
+<text x="846" y="781" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">DETAILS</text>
+<rect x="960" y="532" width="448" height="266" rx="4" fill="#101010" stroke="#323232"/>
+<text x="976" y="562" fill="#B5A8C7" font-family="Arial,sans-serif" font-size="22" font-weight="600">FX</text>
+<rect x="1282" y="545" width="110" height="28" rx="4" fill="#171717" stroke="#323232"/>
+<text x="1292" y="564" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">OFF</text>
+<text x="976" y="591" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">SOURCE</text>
+<rect x="1045" y="573" width="65" height="28" rx="4" fill="#F4F4F2" stroke="#323232"/>
+<text x="1055" y="592" fill="#0A0A0A" font-family="Menlo,monospace" font-size="12" font-weight="400">SEQ</text>
+<text x="1123" y="592" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">MIDI</text>
+<text x="1260" y="592" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">LEVEL 0 dB</text>
+<circle cx="1017" cy="633" r="19" fill="#141414" stroke="#60605C"/>
+<path d="M1017 617V627" fill="none" stroke="#F4F4F2" stroke-width="2"/>
+<text x="976" y="670" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">FM AMOUNT</text>
+<text x="976" y="694" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="16" font-weight="400">30%</text>
+<circle cx="1125" cy="633" r="19" fill="#141414" stroke="#60605C"/>
+<path d="M1125 617V627" fill="none" stroke="#F4F4F2" stroke-width="2"/>
+<text x="1084" y="670" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">FORMANT</text>
+<text x="1084" y="694" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="16" font-weight="400">50%</text>
+<circle cx="1233" cy="633" r="19" fill="#141414" stroke="#60605C"/>
+<path d="M1233 617V627" fill="none" stroke="#F4F4F2" stroke-width="2"/>
+<text x="1192" y="670" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">MOVEMENT</text>
+<text x="1192" y="694" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="16" font-weight="400">40%</text>
+<circle cx="1341" cy="633" r="19" fill="#141414" stroke="#60605C"/>
+<path d="M1341 617V627" fill="none" stroke="#F4F4F2" stroke-width="2"/>
+<text x="1300" y="670" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">RATE</text>
+<text x="1300" y="694" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="16" font-weight="400">1/8</text>
+<path d="M976 728H1392" fill="none" stroke="#323232" stroke-width="1"/>
+<text x="976" y="752" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">LOW CUT ON · 150 Hz</text>
+<text x="976" y="781" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">MOVEMENT SYNCED TO HOST</text>
+<text x="1310" y="781" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">DETAILS</text>
+<path d="M32 821H1408" fill="none" stroke="#323232" stroke-width="1"/>
+<text x="32" y="850" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">KICK DUCK</text>
+<text x="32" y="879" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="24" font-weight="400">45%</text>
+<text x="108" y="879" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="20" font-weight="400">120 ms</text>
+<rect x="220" y="853" width="65" height="28" rx="4" fill="#F4F4F2" stroke="#323232"/>
+<text x="230" y="872" fill="#0A0A0A" font-family="Menlo,monospace" font-size="12" font-weight="400">EXP</text>
+<rect x="293" y="853" width="65" height="28" rx="4" fill="#171717" stroke="#323232"/>
+<text x="303" y="872" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">LIN</text>
+<path d="M32 920V897H48Q65 928 96 928Q145 928 202 897H350" fill="none" stroke="#F4F4F2" stroke-width="1.5"/>
+<text x="32" y="952" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">TARGETS  ROLL ON · SLIDE ON · FX OFF</text>
+<text x="395" y="850" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">DUCK SOURCE</text>
+<text x="395" y="879" fill="#F4F4F2" font-family="Menlo,monospace" font-size="16" font-weight="400">INTERNAL ▾</text>
+<text x="395" y="908" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">1/4 NOTE · STOPPED</text>
+<text x="395" y="952" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">NO AUTOMATIC FALLBACK</text>
+<text x="695" y="850" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">SUB OWNER</text>
+<rect x="695" y="861" width="71" height="28" rx="4" fill="#F4F4F2" stroke="#323232"/>
+<text x="705" y="880" fill="#0A0A0A" font-family="Menlo,monospace" font-size="12" font-weight="400">ROLL</text>
+<rect x="774" y="861" width="79" height="28" rx="4" fill="#171717" stroke="#323232"/>
+<text x="784" y="880" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">SLIDE</text>
+<rect x="861" y="861" width="62" height="28" rx="4" fill="#171717" stroke="#323232"/>
+<text x="871" y="880" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">OFF</text>
+<text x="695" y="920" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">MONO LOW</text>
+<text x="695" y="949" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="18" font-weight="400">120 Hz</text>
+<text x="880" y="920" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">DRIVE</text>
+<text x="880" y="949" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="18" font-weight="400">0%</text>
+<text x="1020" y="850" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">QUALITY</text>
+<rect x="1020" y="861" width="55" height="28" rx="4" fill="#F4F4F2" stroke="#323232"/>
+<text x="1030" y="880" fill="#0A0A0A" font-family="Menlo,monospace" font-size="12" font-weight="400">2x</text>
+<rect x="1083" y="861" width="55" height="28" rx="4" fill="#171717" stroke="#323232"/>
+<text x="1093" y="880" fill="#F4F4F2" font-family="Menlo,monospace" font-size="12" font-weight="400">4x</text>
+<text x="1215" y="850" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">OUTPUT</text>
+<text x="1215" y="880" fill="#F4F4F2" font-family="Arial,sans-serif" font-size="22" font-weight="400">0.0 dB</text>
+<text x="1020" y="952" fill="#989894" font-family="Menlo,monospace" font-size="12" font-weight="400">INTERFACE STUDY / 03</text>
+</svg>
