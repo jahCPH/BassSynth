@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Engine/RollVoice.h"
+
 #include <cstdint>
 
 namespace psyb
@@ -98,6 +100,7 @@ public:
     void setGlobalSwing (double swing);
     void setLane (int engine, const LaneConfig& lane);
     void setStep (int engine, int index, const Step& step);
+    void setRollParams (const RollParams& params);
     LaneConfig lane (int engine) const;
     Step step (int engine, int index) const;
 
@@ -188,6 +191,9 @@ private:
     Trigger triggers[kMaxTriggers] {};
     int triggersN = 0;
     bool transportWasPlaying = false;
+    RollParams rollTarget {};
+    bool rollPrimed = false;
+    RollVoice rollVoice[3] {};
 };
 
 } // namespace psyb

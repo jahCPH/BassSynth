@@ -3,6 +3,7 @@
 #include "UI/PsybAudioProcessorEditor.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace
 {
@@ -12,12 +13,45 @@ bool keepsItsSlot (const psyb::MidiIn& event)
 {
     return event.cc == 120 || event.cc == 123 || (event.cc < 0 && event.velocity <= 0);
 }
+juce::AudioProcessorValueTreeState::ParameterLayout parameterLayout()
+{
+    using namespace juce;
+    AudioProcessorValueTreeState::ParameterLayout layout;
+    auto hz = [] (float min, float max, float skew)
+    {
+        return NormalisableRange<float> (min, max, 0.01f, skew);
+    };
+    auto add = [&] (const String& id, const String& name, NormalisableRange<float> range, float def)
+    {
+        layout.add (std::make_unique<AudioParameterFloat> (ParameterID { id, 1 }, name, range, def));
+    };
+
+    add ("r_cutoff", "Cutoff", hz (20.f, 20000.f, 0.3f), 900.f);
+    add ("r_reso", "Reso", { 0.f, 100.f }, 20.f);
+    add ("r_envamt", "Env Amt", { -100.f, 100.f }, 60.f);
+    add ("r_fdec", "Filter Decay", hz (5.f, 4000.f, 0.3f), 60.f);
+    add ("r_fatk", "Filter Attack", hz (0.5f, 200.f, 0.3f), 0.5f);
+    add ("r_fsus", "Filter Sustain", { 0.f, 100.f }, 0.f);
+    add ("r_aatk", "Amp Attack", hz (0.5f, 200.f, 0.3f), 0.5f);
+    add ("r_adec", "Amp Decay", hz (5.f, 4000.f, 0.3f), 70.f);
+    add ("r_asus", "Amp Sustain", { 0.f, 100.f }, 0.f);
+    add ("r_arel", "Amp Release", hz (2.f, 2000.f, 0.3f), 12.f);
+    add ("r_drive", "Drive", { 0.f, 100.f }, 15.f);
+    add ("b_sublevel", "Sub", { 0.f, 100.f }, 70.f);
+    add ("b_output", "Output", { -24.f, 6.f }, 0.f);
+    layout.add (std::make_unique<AudioParameterBool> (ParameterID { "r_phasereset", 1 }, "Phase Reset", true));
+    layout.add (std::make_unique<AudioParameterBool> (ParameterID { "r_filterreset", 1 }, "Filter Reset", true));
+    layout.add (std::make_unique<AudioParameterBool> (ParameterID { "q_latch", 1 }, "Latch", false));
+    return layout;
+}
+
 } // namespace
 
 PsybAudioProcessor::PsybAudioProcessor()
     : AudioProcessor (BusesProperties()
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)
                           .withInput ("Sidechain", juce::AudioChannelSet::stereo(), false))
+    , apvts (*this, nullptr, "PsyRoot", parameterLayout())
 {
     midiEvents.reserve (static_cast<size_t> (kMidiEventCapacity));
 }
@@ -50,6 +84,31 @@ void PsybAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 
     auto output = getBusBuffer (buffer, false, 0);
     output.clear();
+
+    auto raw = [this] (const char* id) { return apvts.getRawParameterValue (id)->load(); };
+    psyb::RollParams params;
+    params.cutoffHz = raw ("r_cutoff");
+    params.reso = raw ("r_reso") / 100.f;
+    params.envAmt = raw ("r_envamt") / 100.f;
+    params.fdecMs = raw ("r_fdec");
+    params.fatkMs = raw ("r_fatk");
+    params.fsus = raw ("r_fsus") / 100.f;
+    params.aatkMs = raw ("r_aatk");
+    params.adecMs = raw ("r_adec");
+    params.asus = raw ("r_asus") / 100.f;
+    params.arelMs = raw ("r_arel");
+    params.drive = raw ("r_drive") / 100.f;
+    params.sub = raw ("b_sublevel") / 100.f;
+    params.outputDb = raw ("b_output");
+    params.phaseReset = raw ("r_phasereset") >= 0.5f;
+    params.filterReset = raw ("r_filterreset") >= 0.5f;
+    engine.setRollParams (params);
+    const bool latch = raw ("q_latch") >= 0.5f;
+    if (latch != lastLatch)
+    {
+        engine.setLatch (latch);
+        lastLatch = latch;
+    }
 
     psyb::Block block;
     block.sampleRate = getSampleRate();
@@ -151,8 +210,17 @@ void PsybAudioProcessor::setCurrentProgram (int) {}
 const juce::String PsybAudioProcessor::getProgramName (int) { return {}; }
 void PsybAudioProcessor::changeProgramName (int, const juce::String&) {}
 
-void PsybAudioProcessor::getStateInformation (juce::MemoryBlock&) {}
-void PsybAudioProcessor::setStateInformation (const void*, int) {}
+void PsybAudioProcessor::getStateInformation (juce::MemoryBlock& dest)
+{
+    if (auto xml = apvts.copyState().createXml())
+        copyXmlToBinary (*xml, dest);
+}
+
+void PsybAudioProcessor::setStateInformation (const void* data, int size)
+{
+    if (auto xml = getXmlFromBinary (data, size))
+        apvts.replaceState (juce::ValueTree::fromXml (*xml));
+}
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {

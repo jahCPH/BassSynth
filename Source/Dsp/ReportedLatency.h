@@ -5,8 +5,7 @@ namespace psyb
 
 /** Samples reported to the host via setLatencySamples.
 
-    Stays 0 until oversampling is wired. Oversampling latency and scheduling
-    delay are different things; this value is only the former.
+    This is the Rolling drive's 2x halfband delay. Scheduling delay is separate.
 */
 int hostReportedLatencySamples();
 

@@ -2,6 +2,13 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+
+#if defined (__x86_64__) || defined (_M_X64) || defined (__i386__) || defined (_M_IX86)
+ #include <pmmintrin.h>
+#elif defined (__aarch64__)
+ // FPCR is set with an instruction below.
+#endif
 
 namespace psyb
 {
@@ -13,6 +20,35 @@ constexpr double kReleaseSec = 0.012;
 constexpr double kTailSec = 0.002;
 constexpr double kStealSec = 0.0003;
 constexpr double kSilence = 1.0e-3;
+
+/** Flush denormals for the audio callback. JUCE-free so the DSP lib and the
+    headless tests get the same protection as the plugin's ScopedNoDenormals. */
+struct FlushDenormals
+{
+#if defined (__x86_64__) || defined (_M_X64) || defined (__i386__) || defined (_M_IX86)
+    unsigned old;
+    FlushDenormals() noexcept : old (static_cast<unsigned> (_mm_getcsr()))
+    {
+        _mm_setcsr (old | 0x8040u);
+    }
+    ~FlushDenormals() noexcept { _mm_setcsr (old); }
+#elif defined (__aarch64__)
+    std::uint64_t old;
+    FlushDenormals() noexcept
+    {
+        std::uint64_t fpcr = 0;
+        asm volatile ("mrs %0, fpcr" : "=r"(fpcr));
+        old = fpcr;
+        asm volatile ("msr fpcr, %0" :: "r"(fpcr | (std::uint64_t (1) << 24)));
+    }
+    ~FlushDenormals() noexcept
+    {
+        asm volatile ("msr fpcr, %0" :: "r"(old));
+    }
+#else
+    FlushDenormals() noexcept {}
+#endif
+};
 
 double midiFreq (double note)
 {
@@ -57,6 +93,10 @@ void PsyEngine::reset()
     triggersN = 0;
     transportWasPlaying = false;
     renderRate = 48000.0;
+    rollTarget = {};
+    rollPrimed = false;
+    for (auto& voice : rollVoice)
+        voice.reset();
     std::fill (&route[0][0], &route[0][0] + 16 * 128, static_cast<uint8_t> (0));
     for (int e = 0; e < kEngineCount; ++e)
     {
@@ -102,6 +142,17 @@ void PsyEngine::setDuckNote (int note) { duckNote = note; }
 void PsyEngine::setGlobalSwing (double swing) { globalSwing = std::clamp (swing, 0.0, 0.75); }
 void PsyEngine::setLane (int engine, const LaneConfig& lane) { lanes[engine].cfg = lane; }
 void PsyEngine::setStep (int engine, int index, const Step& step) { lanes[engine].steps[index] = step; }
+
+void PsyEngine::setRollParams (const RollParams& params)
+{
+    if (! rollPrimed)
+    {
+        for (auto& voice : rollVoice)
+            voice.prime (params);
+        rollPrimed = true;
+    }
+    rollTarget = params;
+}
 LaneConfig PsyEngine::lane (int engine) const { return lanes[engine].cfg; }
 Step PsyEngine::step (int engine, int index) const { return lanes[engine].steps[index]; }
 
@@ -144,6 +195,8 @@ void PsyEngine::clearVoices()
         lanes[e].stolen = {};
         midiStackN[e] = 0;
     }
+    for (auto& voice : rollVoice)
+        voice.reset();
 }
 
 void PsyEngine::retargetArp (int engine)
@@ -424,6 +477,7 @@ void PsyEngine::startVoice (int engine, int sample, int note, bool retrigger, co
 
     // Two audible slots, plus the stolen tail for one short ramp.
     // The new voice still starts on this sample.
+    const bool hadActive = lane.active.used;
     if (lane.tail.used)
     {
         lane.stolen = lane.tail;
@@ -433,8 +487,13 @@ void PsyEngine::startVoice (int engine, int sample, int note, bool retrigger, co
         lane.stolen.releaseEnv = lane.stolen.env;
         lane.stolen.tailLeft = samplesFor (kStealSec, renderRate);
         lane.stolen.fadeSpan = lane.stolen.tailLeft;
+        if (engine == 0)
+        {
+            rollVoice[2] = rollVoice[1];
+            rollVoice[2].beginFade (lane.stolen.tailLeft);
+        }
     }
-    if (lane.active.used)
+    if (hadActive)
     {
         lane.tail = lane.active;
         lane.tail.tail = true;
@@ -443,12 +502,27 @@ void PsyEngine::startVoice (int engine, int sample, int note, bool retrigger, co
         lane.tail.releaseEnv = lane.tail.env;
         lane.tail.tailLeft = samplesFor (kTailSec, renderRate);
         lane.tail.fadeSpan = lane.tail.tailLeft;
+        if (engine == 0)
+        {
+            rollVoice[1] = rollVoice[0];
+            rollVoice[1].beginFade (lane.tail.tailLeft);
+        }
     }
 
     lane.active = {};
     lane.active.used = true;
     lane.active.note = note;
     lane.pendingOff = false;
+    if (engine == 0)
+    {
+        RollVoice born;
+        if (hadActive)
+            born.copySmoothingFrom (rollVoice[1]);
+        else
+            born.prime (rollTarget);
+        born.start (rollTarget.phaseReset, rollTarget.filterReset, hadActive ? &rollVoice[1] : nullptr);
+        rollVoice[0] = born;
+    }
     (void) sample;
 }
 
@@ -525,6 +599,38 @@ void PsyEngine::renderSample (float& out)
             continue;
 
         Voice* slots[3] = { &lane.active, &lane.tail, &lane.stolen };
+        if (e == 0)
+        {
+            for (int s = 0; s < 3; ++s)
+            {
+                auto* v = slots[s];
+                if (! v->used)
+                    continue;
+                auto& rv = rollVoice[s];
+                if (v->releasing && ! rv.isReleasing())
+                    rv.release();
+
+                double note = static_cast<double> (v->note);
+                if (v->gliding && v->glideSamples > 0)
+                {
+                    const double t = std::min (1.0, static_cast<double> (v->glidePos) / static_cast<double> (v->glideSamples));
+                    note = v->glideFrom + (v->glideTo - v->glideFrom) * t;
+                    ++v->glidePos;
+                }
+
+                float sample = rv.process (rollTarget, renderRate, static_cast<float> (midiFreq (note)));
+                v->env = rv.ampLevel();
+                if (rv.fadeFinished() || (v->releasing && v->env < kSilence))
+                {
+                    *v = {};
+                    rv.reset();
+                    continue;
+                }
+                out += sample;
+            }
+            continue;
+        }
+
         for (auto* v : slots)
         {
             if (! v->used)
@@ -578,6 +684,9 @@ void PsyEngine::renderSample (float& out)
             out += sample;
         }
     }
+
+    const float outputGain = std::pow (10.f, rollTarget.outputDb / 20.f);
+    out *= outputGain;
 }
 
 void PsyEngine::process (const Block& block, const MidiIn* midi, int midiCount, float* monoOut)
@@ -586,6 +695,7 @@ void PsyEngine::process (const Block& block, const MidiIn* midi, int midiCount, 
     if (block.numSamples <= 0 || block.bpm <= 0.0 || block.sampleRate <= 0.0)
         return;
 
+    const FlushDenormals flushDenormals;
     renderRate = block.sampleRate;
 
     for (int e = 0; e < kEngineCount; ++e)
