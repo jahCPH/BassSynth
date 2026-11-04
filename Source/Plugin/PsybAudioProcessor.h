@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Engine/Sequencer.h"
+
 #include <juce_audio_processors/juce_audio_processors.h>
 
 /** Empty synth shell. Display name is PsyRoot.
@@ -35,5 +37,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
 private:
+    psyb::PsyEngine engine;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PsybAudioProcessor)
 };
