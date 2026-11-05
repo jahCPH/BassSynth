@@ -61,7 +61,10 @@ juce_generate_juce_header(BassSynth)
 add_library(psyb_dsp STATIC
     Source/Dsp/ReportedLatency.cpp
     Source/Dsp/Pitch.cpp
+    Source/Dsp/KickDetector.cpp
+    Source/Dsp/DuckEnvelope.cpp
     Source/Dsp/RollVoice.cpp
+    Source/Engine/DuckBus.cpp
     Source/Engine/BassEngine.cpp
     Source/Engine/SineEngine.cpp
     Source/Engine/EngineFactory.cpp
@@ -96,7 +99,7 @@ target_link_libraries(BassSynth
         juce::juce_recommended_warning_flags)
 
 if(BASSSYNTH_BUILD_TESTS)
-    add_executable(BassSynthTests Tests/SeqTests.cpp Tests/RollTests.cpp Tests/SlideTests.cpp Tests/ModuleTests.cpp)
+    add_executable(BassSynthTests Tests/SeqTests.cpp Tests/RollTests.cpp Tests/SlideTests.cpp Tests/ModuleTests.cpp Tests/DuckTests.cpp)
     target_link_libraries(BassSynthTests PRIVATE psyb_dsp)
     target_compile_features(BassSynthTests PRIVATE cxx_std_17)
     target_compile_definitions(BassSynthTests PRIVATE BASSSYNTH_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

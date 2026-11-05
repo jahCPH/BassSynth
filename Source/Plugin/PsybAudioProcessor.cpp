@@ -65,6 +65,22 @@ juce::AudioProcessorValueTreeState::ParameterLayout parameterLayout()
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { "q_latch", 1 }, "Latch", false));
     layout.add (std::make_unique<AudioParameterChoice> (ParameterID { "b_subowner", 1 }, "Sub Owner",
                                                         StringArray { "ROLL", "SLIDE", "OFF" }, 0));
+    layout.add (std::make_unique<AudioParameterChoice> (ParameterID { "b_duck_src", 1 }, "Duck Source",
+                                                        StringArray { "INTERNAL", "MIDI", "AUDIO" }, 0));
+    add ("b_duck_depth", "Duck Depth", { 0.f, 100.f, 0.1f }, 45.f);
+    add ("b_duck_release", "Duck Release", { 10.f, 500.f, 0.1f }, 120.f);
+    add ("b_duck_hold", "Duck Hold", { 0.f, 50.f, 0.1f }, 0.f);
+    layout.add (std::make_unique<AudioParameterChoice> (ParameterID { "b_duck_curve", 1 }, "Duck Curve",
+                                                        StringArray { "LIN", "EXP" }, 1));
+    add ("b_duck_note", "Duck Note", { 0.f, 127.f, 1.f }, 36.f);
+    StringArray channels { "ANY" };
+    for (int ch = 1; ch <= 16; ++ch)
+        channels.add (String (ch));
+    layout.add (std::make_unique<AudioParameterChoice> (ParameterID { "b_duck_ch", 1 }, "Duck Channel", channels, 0));
+    layout.add (std::make_unique<AudioParameterBool> (ParameterID { "b_duck_passthru", 1 }, "Duck Passthru", false));
+    layout.add (std::make_unique<AudioParameterBool> (ParameterID { "b_duck_target_r", 1 }, "Duck Roll", true));
+    layout.add (std::make_unique<AudioParameterBool> (ParameterID { "b_duck_target_s", 1 }, "Duck Slide", true));
+    layout.add (std::make_unique<AudioParameterBool> (ParameterID { "b_duck_target_f", 1 }, "Duck FX", false));
     return layout;
 }
 
@@ -98,6 +114,7 @@ bool PsybAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
     // Sidechain is optional. Disabled by default; the host may enable stereo.
     const auto sidechain = layouts.getMainInputChannelSet();
     return sidechain == juce::AudioChannelSet::disabled()
+        || sidechain == juce::AudioChannelSet::mono()
         || sidechain == juce::AudioChannelSet::stereo();
 }
 
@@ -155,6 +172,21 @@ void PsybAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     engine.setLaneGlide (1, raw ("s_glide_seq") / 100.f, raw ("s_glide_ms"));
     if (auto* owner = dynamic_cast<juce::AudioParameterChoice*> (apvts.getParameter ("b_subowner")))
         engine.setSubOwner (static_cast<psyb::SubOwner> (owner->getIndex()));
+
+    if (auto* src = dynamic_cast<juce::AudioParameterChoice*> (apvts.getParameter ("b_duck_src")))
+        engine.setDuckSource (static_cast<psyb::DuckSource> (src->getIndex()));
+    engine.setDuckDepth (raw ("b_duck_depth"));
+    engine.setDuckReleaseMs (raw ("b_duck_release"));
+    engine.setDuckHoldMs (raw ("b_duck_hold"));
+    if (auto* curve = dynamic_cast<juce::AudioParameterChoice*> (apvts.getParameter ("b_duck_curve")))
+        engine.setDuckCurve (static_cast<psyb::DuckCurve> (curve->getIndex()));
+    engine.setDuckNote (static_cast<int> (std::lround (raw ("b_duck_note"))));
+    if (auto* channel = dynamic_cast<juce::AudioParameterChoice*> (apvts.getParameter ("b_duck_ch")))
+        engine.setDuckChannel (channel->getIndex());
+    engine.setDuckPassthru (raw ("b_duck_passthru") >= 0.5f);
+    engine.setDuckTarget (0, raw ("b_duck_target_r") >= 0.5f);
+    engine.setDuckTarget (1, raw ("b_duck_target_s") >= 0.5f);
+    engine.setDuckTarget (2, raw ("b_duck_target_f") >= 0.5f);
 
     const bool latch = raw ("q_latch") >= 0.5f;
     if (latch != lastLatch)
@@ -233,11 +265,23 @@ void PsybAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         }
     }
 
+    const float* sidechain[2] = { nullptr, nullptr };
+    int sidechainChannels = 0;
+    if (getBusCount (true) > 0)
+    {
+        auto side = getBusBuffer (buffer, true, 0);
+        sidechainChannels = std::min (2, side.getNumChannels());
+        for (int c = 0; c < sidechainChannels; ++c)
+            sidechain[c] = side.getReadPointer (c);
+    }
+
     if (output.getNumSamples() > 0)
         engine.process (block,
                         midiEvents.empty() ? nullptr : midiEvents.data(),
                         static_cast<int> (midiEvents.size()),
-                        output.getWritePointer (0));
+                        output.getWritePointer (0),
+                        sidechainChannels > 0 ? sidechain : nullptr,
+                        sidechainChannels);
 
     if (output.getNumChannels() > 1)
         output.copyFrom (1, 0, output, 0, 0, output.getNumSamples());

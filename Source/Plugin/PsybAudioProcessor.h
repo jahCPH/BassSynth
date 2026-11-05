@@ -38,6 +38,8 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
     juce::AudioProcessorValueTreeState& parameters() { return apvts; }
+    int duckState() const { return engine.duckState(); }
+    float duckGain() const { return engine.duckGain(); }
 
 private:
     juce::AudioProcessorValueTreeState apvts;

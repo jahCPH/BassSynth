@@ -63,6 +63,7 @@ void BassEngine::reset()
     owns = role == BassRole::Roll;
     gainTarget = audible ? 1.f : 0.f;
     gainSm = gainTarget;
+    duckGain = 1.f;
     active = {};
     tail = {};
     stolen = {};
@@ -266,8 +267,9 @@ void BassEngine::render (float* mono, int n)
                 rv.reset();
                 continue;
             }
-            if (gainSm != 0.f)
-                mono[i] += sample * gainSm;
+            const float applied = duckGain == 1.f ? gainSm : gainSm * duckGain;
+            if (applied != 0.f)
+                mono[i] += sample * applied;
         }
     }
 }

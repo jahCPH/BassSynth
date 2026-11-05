@@ -18,6 +18,7 @@ public:
     void setLevelDb (float) override;
     void setSubOwner (SubOwner) override;
     void setAccentAmount (float) override;
+    void setDuckGain (float gain) override { duckGain = gain; }
     bool noteOn (int sample, int note, int velocity, bool retrigger, float glideMs, bool accented) override;
     void noteOff() override;
     void releaseAll() override;
@@ -37,6 +38,7 @@ private:
 
     double sampleRate = 48000.0;
     bool enabled = false;
+    float duckGain = 1.f;
     VoiceSlot active {};
     VoiceSlot tail {};
     VoiceSlot stolen {};

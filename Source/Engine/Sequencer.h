@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Engine/DuckBus.h"
 #include "Engine/EngineModule.h"
 
 #include <cstdint>
@@ -15,7 +16,6 @@ constexpr int kMaxTriggers = 64;
 
 enum class SourceMode : int { Seq = 0, Midi = 1 };
 enum class ArpOrder : int { Up = 0, Down = 1, UpDown = 2, AsPlayed = 3, Random = 4 };
-enum class DuckSource : int { Internal = 0, Midi = 1, Audio = 2 };
 
 struct Step
 {
@@ -100,6 +100,17 @@ public:
     void setLatch (bool latch);
     void setDuckSource (DuckSource source);
     void setDuckNote (int note);
+    void setDuckDepth (float percent);
+    void setDuckReleaseMs (float ms);
+    void setDuckHoldMs (float ms);
+    void setDuckCurve (DuckCurve curve);
+    void setDuckChannel (int midiChannelOrAny);
+    void setDuckPassthru (bool on);
+    void setDuckTarget (int engine, bool on);
+    int busLatencySamples() const { return busLatency; }
+    float duckGain() const { return duck.publishedGain(); }
+    int duckState() const { return duck.publishedState(); }
+    int duckTriggerCount() const { return duck.triggerCount(); }
     void setGlobalSwing (double swing);
     void setLane (int engine, const LaneConfig& lane);
     void setStep (int engine, int index, const Step& step);
@@ -115,7 +126,9 @@ public:
     LaneConfig lane (int engine) const;
     Step step (int engine, int index) const;
 
-    void process (const Block& block, const MidiIn* midi, int midiCount, float* monoOut);
+    void process (const Block& block, const MidiIn* midi, int midiCount, float* monoOut,
+                  const float* const* sidechain = nullptr, int sidechainChannels = 0,
+                  float* duckGainOut = nullptr);
 
     int soundingVoices() const;
     int triggerCount() const;
@@ -170,8 +183,11 @@ private:
 
     double renderRate = 48000.0;
 
+    DuckBus duck;
     DuckSource duckSource = DuckSource::Internal;
     int duckNote = 36;
+    int duckChannel = 0;
+    bool duckPassthru = false;
     ArpOrder order = ArpOrder::Up;
     bool latch = false;
     double globalSwing = 0.0;
