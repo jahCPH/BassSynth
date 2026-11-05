@@ -1,4 +1,5 @@
 #include "PsybAudioProcessor.h"
+#include "Dsp/AlgorithmVersion.h"
 #include "Dsp/ReportedLatency.h"
 #include "UI/PsybAudioProcessorEditor.h"
 
@@ -265,13 +266,31 @@ void PsybAudioProcessor::changeProgramName (int, const juce::String&) {}
 void PsybAudioProcessor::getStateInformation (juce::MemoryBlock& dest)
 {
     if (auto xml = apvts.copyState().createXml())
+    {
+        xml->setAttribute ("algo_r", engine.storedAlgorithmVersion (0));
+        xml->setAttribute ("algo_s", engine.storedAlgorithmVersion (1));
+        xml->setAttribute ("algo_f", engine.storedAlgorithmVersion (2));
         copyXmlToBinary (*xml, dest);
+    }
 }
 
 void PsybAudioProcessor::setStateInformation (const void* data, int size)
 {
     if (auto xml = getXmlFromBinary (data, size))
+    {
+        psyb::AlgorithmVersionFields fields;
+        fields.hasRoll = xml->hasAttribute ("algo_r");
+        fields.hasSlide = xml->hasAttribute ("algo_s");
+        fields.hasFx = xml->hasAttribute ("algo_f");
+        fields.roll = xml->getIntAttribute ("algo_r", 1);
+        fields.slide = xml->getIntAttribute ("algo_s", 1);
+        fields.fx = xml->getIntAttribute ("algo_f", 1);
+        const auto versions = psyb::resolveAlgorithmVersions (fields);
+        engine.setStoredAlgorithmVersion (0, versions.roll);
+        engine.setStoredAlgorithmVersion (1, versions.slide);
+        engine.setStoredAlgorithmVersion (2, versions.fx);
         apvts.replaceState (juce::ValueTree::fromXml (*xml));
+    }
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

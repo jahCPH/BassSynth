@@ -72,6 +72,7 @@ std::vector<psyb::Trigger> playSteps (psyb::PsyEngine& engine, int steps, int bl
 
 int runRollTests();
 int runSlideTests();
+int runModuleTests();
 
 int main()
 {
@@ -692,6 +693,7 @@ int main()
 
     gFails += runRollTests();
     gFails += runSlideTests();
+    gFails += runModuleTests();
 
     if (gFails != 0)
     {
