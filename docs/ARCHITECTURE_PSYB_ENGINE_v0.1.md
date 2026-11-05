@@ -9,6 +9,8 @@ step glide FOLLOW/OVERRIDE, parameter table completed (draft IDs), duck NO BUS v
 **Rev 0.1.2:** MONO LOW redesigned as a side-channel high-pass (transparent for mono by construction), QUALITY
 placement noted. Prompted by Astra's UI study 02 caveat.
 **Rev 0.1.3:** L1 decided by Linus (2026-11-04): 7-day trial + Moonbase licensing, no separate beta expiry.
+**Rev 0.1.8:** `b_duck_hold` added to §8 (was only in §6.3); duck timing rule: every trigger is applied at
+trigger sample + bus latency so the dip lands on the kick after host delay compensation (§6.3).
 **Rev 0.1.7:** engine module interface (§5.0) and per-engine algorithm versions (§10), approved by Linus
 (2026-11-05) so engines can be improved independently after release.
 **Rev 0.1.6:** filter-decay IDs normalised to `*_fdec` (matches `*_adec`); no `*_fdecay`/`*_adecay` IDs exist.
@@ -259,6 +261,8 @@ Main panel: FM AMOUNT · FORMANT · MOVEMENT · RATE.
 - Gain envelope per trigger: attack fixed ~1 ms, optional hold (0–50 ms, default 0), RELEASE 10–500 ms
   (default 120 ms), curve LIN/EXP (default EXP). DEPTH 0–100% with dB readout (100% = −∞ dB at the trough).
 - Targets: per-engine toggles ROLL / SLIDE / FX (default ROLL + SLIDE ON, FX OFF).
+- **Timing:** engine audio is delayed by the bus latency (§7). Every duck trigger, whatever the source, is applied
+  at trigger sample + bus latency, so after host delay compensation the dip lands exactly on the kick.
 - Sources:
   - **INTERNAL:** trigger on every host quarter note (PPQ integer). Sample-accurate. Assumes a 4/4 kick;
     label says so.
@@ -333,6 +337,7 @@ IDs are stable once shipped (state compatibility). Prefix: `r_` Rolling, `s_` Sl
 | b_duck_src | INTERNAL/MIDI/AUDIO | INTERNAL | |
 | b_duck_depth | 0–100 | 45 | % |
 | b_duck_release | 10–500 | 120 | ms |
+| b_duck_hold | 0–50 | 0 | ms |
 | b_duck_curve | LIN/EXP | EXP | |
 | b_duck_note / b_duck_ch | 0–127 / ANY,1–16 | 36 / ANY | |
 | b_duck_passthru | bool | OFF | |
