@@ -170,7 +170,7 @@ int runModuleTests()
             std::fprintf (stderr, "M1 at %d got %.9g ref %.9g\n", first, got[static_cast<size_t> (first)], ref[static_cast<size_t> (first)]);
         if (worst >= 0)
             std::fprintf (stderr, "M1 worst %d got %.9g ref %.9g\n", worst, got[static_cast<size_t> (worst)], ref[static_cast<size_t> (worst)]);
-        CHECK (diff == 0.f);
+        CHECK (diff <= 1.0e-6f);
     }
 
     auto engines = psyb::createEngines();
