@@ -103,6 +103,27 @@ void RollVoice::copySmoothingFrom (const RollVoice& other)
     smSub = other.smSub;
 }
 
+void RollVoice::prepareBlock (const RollParams& target, double sampleRate)
+{
+    const float sr = static_cast<float> (sampleRate);
+    cSmooth = 1.f - std::exp (-1.f / (0.010f * sr));
+    cAStep = 1.f / std::max (1.f, target.aatkMs * 0.001f * sr);
+    cACoef = coef60 (target.adecMs, sampleRate);
+    cRCoef = coef60 (target.arelMs, sampleRate);
+    cFStep = 1.f / std::max (1.f, target.fatkMs * 0.001f * sr);
+    cFCoef = coef60 (target.fdecMs, sampleRate);
+    cAsus = std::clamp (target.asus, 0.f, 1.f);
+    cFsus = std::clamp (target.fsus, 0.f, 1.f);
+    cDcR = std::exp (-2.f * 3.14159265f * 20.f / (sr * 2.f));
+    coefReady = true;
+}
+
+void RollVoice::setAccent (float gain, float envAdd)
+{
+    accentGain = gain;
+    accentEnv = envAdd;
+}
+
 void RollVoice::start (bool phaseReset, bool filterReset, const RollVoice* inherit)
 {
     if (inherit != nullptr && ! phaseReset)
@@ -160,7 +181,7 @@ float RollVoice::process (const RollParams& target, double sampleRate, float fre
         return 0.f;
 
     const float sr = static_cast<float> (sampleRate);
-    const float smooth = 1.f - std::exp (-1.f / (0.010f * sr));
+    const float smooth = coefReady ? cSmooth : 1.f - std::exp (-1.f / (0.010f * sr));
     const float targetCut = std::clamp (target.cutoffHz, 20.f, 20000.f);
     logCut += (std::log (targetCut) - logCut) * smooth;
     smReso += (std::clamp (target.reso, 0.f, 1.f) - smReso) * smooth;
@@ -168,13 +189,13 @@ float RollVoice::process (const RollParams& target, double sampleRate, float fre
     smEnv += (std::clamp (target.envAmt, -1.f, 1.f) - smEnv) * smooth;
     smSub += (std::clamp (target.sub, 0.f, 1.f) - smSub) * smooth;
 
-    const float aStep = 1.f / std::max (1.f, target.aatkMs * 0.001f * sr);
-    const float aCoef = coef60 (target.adecMs, sampleRate);
-    const float rCoef = coef60 (target.arelMs, sampleRate);
-    const float fStep = 1.f / std::max (1.f, target.fatkMs * 0.001f * sr);
-    const float fCoef = coef60 (target.fdecMs, sampleRate);
-    const float asus = std::clamp (target.asus, 0.f, 1.f);
-    const float fsus = std::clamp (target.fsus, 0.f, 1.f);
+    const float aStep = coefReady ? cAStep : 1.f / std::max (1.f, target.aatkMs * 0.001f * sr);
+    const float aCoef = coefReady ? cACoef : coef60 (target.adecMs, sampleRate);
+    const float rCoef = coefReady ? cRCoef : coef60 (target.arelMs, sampleRate);
+    const float fStep = coefReady ? cFStep : 1.f / std::max (1.f, target.fatkMs * 0.001f * sr);
+    const float fCoef = coefReady ? cFCoef : coef60 (target.fdecMs, sampleRate);
+    const float asus = coefReady ? cAsus : std::clamp (target.asus, 0.f, 1.f);
+    const float fsus = coefReady ? cFsus : std::clamp (target.fsus, 0.f, 1.f);
 
     if (ampStage == kAttack)
     {
@@ -221,7 +242,8 @@ float RollVoice::process (const RollParams& target, double sampleRate, float fre
     phase += static_cast<double> (dt);
     phase -= std::floor (phase);
 
-    const float fc = std::clamp (std::exp (logCut) * std::pow (2.f, smEnv * fenv * 4.f), 20.f, sr * 0.42f);
+    const float envMod = std::clamp (smEnv + accentEnv, -1.5f, 1.5f);
+    const float fc = std::clamp (std::exp (logCut) * std::pow (2.f, envMod * fenv * 4.f), 20.f, sr * 0.42f);
     const float g = std::tan (3.14159265f * fc / sr);
     const float G = g / (1.f + g);
     const float G2 = G * G;
@@ -252,8 +274,7 @@ float RollVoice::process (const RollParams& target, double sampleRate, float fre
     subPhase -= std::floor (subPhase);
 
     const float shaped = (u + sub) * amp;
-    const float highSr = sr * 2.f;
-    const float dcR = std::exp (-2.f * 3.14159265f * 20.f / highSr);
+    const float dcR = coefReady ? cDcR : std::exp (-2.f * 3.14159265f * 20.f / (sr * 2.f));
     auto driveSample = [&] (float x)
     {
         const float clip = asymmetric (x, smDrive);
@@ -278,7 +299,7 @@ float RollVoice::process (const RollParams& target, double sampleRate, float fre
         }
     }
 
-    return out;
+    return out * accentGain;
 }
 
 } // namespace psyb

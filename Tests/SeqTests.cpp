@@ -71,6 +71,7 @@ std::vector<psyb::Trigger> playSteps (psyb::PsyEngine& engine, int steps, int bl
 } // namespace
 
 int runRollTests();
+int runSlideTests();
 
 int main()
 {
@@ -690,6 +691,7 @@ int main()
     }
 
     gFails += runRollTests();
+    gFails += runSlideTests();
 
     if (gFails != 0)
     {

@@ -37,11 +37,33 @@ juce::AudioProcessorValueTreeState::ParameterLayout parameterLayout()
     add ("r_asus", "Amp Sustain", { 0.f, 100.f }, 0.f);
     add ("r_arel", "Amp Release", hz (2.f, 2000.f, 0.3f), 12.f);
     add ("r_drive", "Drive", { 0.f, 100.f }, 15.f);
+    add ("r_level", "Roll Level", { -60.f, 6.f, 0.1f }, 0.f);
     add ("b_sublevel", "Sub", { 0.f, 100.f }, 70.f);
     add ("b_output", "Output", { -24.f, 6.f }, 0.f);
+    add ("s_cutoff", "Slide Cutoff", hz (20.f, 20000.f, 0.3f), 1200.f);
+    add ("s_reso", "Slide Reso", { 0.f, 100.f }, 45.f);
+    add ("s_envamt", "Slide Env", { -100.f, 100.f }, 50.f);
+    add ("s_fatk", "Slide Filt Atk", hz (0.5f, 200.f, 0.3f), 0.5f);
+    add ("s_fdec", "Slide Filt Dec", hz (5.f, 4000.f, 0.3f), 250.f);
+    add ("s_fsus", "Slide Filt Sus", { 0.f, 100.f }, 0.f);
+    add ("s_aatk", "Slide Amp Atk", hz (0.5f, 200.f, 0.3f), 0.5f);
+    add ("s_adec", "Slide Amp Dec", hz (5.f, 4000.f, 0.3f), 300.f);
+    add ("s_asus", "Slide Amp Sus", { 0.f, 100.f }, 0.f);
+    add ("s_arel", "Slide Amp Rel", hz (2.f, 2000.f, 0.3f), 40.f);
+    add ("s_drive", "Slide Drive", { 0.f, 100.f }, 15.f);
+    add ("s_accent", "Accent", { 0.f, 100.f }, 50.f);
+    add ("s_glide_seq", "Glide", { 0.f, 100.f }, 40.f);
+    add ("s_glide_ms", "Glide ms", { 0.f, 2000.f, 0.1f }, 60.f);
+    add ("s_level", "Slide Level", { -60.f, 6.f, 0.1f }, 0.f);
+    layout.add (std::make_unique<AudioParameterBool> (ParameterID { "r_on", 1 }, "Roll On", true));
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { "r_phasereset", 1 }, "Phase Reset", true));
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { "r_filterreset", 1 }, "Filter Reset", true));
+    layout.add (std::make_unique<AudioParameterBool> (ParameterID { "s_on", 1 }, "Slide On", false));
+    layout.add (std::make_unique<AudioParameterBool> (ParameterID { "s_phasereset", 1 }, "Slide Phase Reset", true));
+    layout.add (std::make_unique<AudioParameterBool> (ParameterID { "s_filterreset", 1 }, "Slide Filter Reset", false));
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { "q_latch", 1 }, "Latch", false));
+    layout.add (std::make_unique<AudioParameterChoice> (ParameterID { "b_subowner", 1 }, "Sub Owner",
+                                                        StringArray { "ROLL", "SLIDE", "OFF" }, 0));
     return layout;
 }
 
@@ -103,6 +125,36 @@ void PsybAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     params.phaseReset = raw ("r_phasereset") >= 0.5f;
     params.filterReset = raw ("r_filterreset") >= 0.5f;
     engine.setRollParams (params);
+    engine.setEngineAudible (0, raw ("r_on") >= 0.5f);
+    engine.setEngineLevelDb (0, raw ("r_level"));
+
+    psyb::RollParams slide;
+    slide.cutoffHz = raw ("s_cutoff");
+    slide.reso = raw ("s_reso") / 100.f;
+    slide.envAmt = raw ("s_envamt") / 100.f;
+    slide.fatkMs = raw ("s_fatk");
+    slide.fdecMs = raw ("s_fdec");
+    slide.fsus = raw ("s_fsus") / 100.f;
+    slide.aatkMs = raw ("s_aatk");
+    slide.adecMs = raw ("s_adec");
+    slide.asus = raw ("s_asus") / 100.f;
+    slide.arelMs = raw ("s_arel");
+    slide.drive = raw ("s_drive") / 100.f;
+    slide.sub = raw ("b_sublevel") / 100.f;
+    slide.phaseReset = raw ("s_phasereset") >= 0.5f;
+    slide.filterReset = raw ("s_filterreset") >= 0.5f;
+    engine.setSlideParams (slide);
+    engine.setSlideAccent (raw ("s_accent") / 100.f);
+    engine.setEngineLevelDb (1, raw ("s_level"));
+    const bool slideOn = raw ("s_on") >= 0.5f;
+    engine.setEngineAudible (1, slideOn);
+    auto slideLane = engine.lane (1);
+    slideLane.enabled = slideOn;
+    engine.setLane (1, slideLane);
+    engine.setLaneGlide (1, raw ("s_glide_seq") / 100.f, raw ("s_glide_ms"));
+    if (auto* owner = dynamic_cast<juce::AudioParameterChoice*> (apvts.getParameter ("b_subowner")))
+        engine.setSubOwner (static_cast<psyb::SubOwner> (owner->getIndex()));
+
     const bool latch = raw ("q_latch") >= 0.5f;
     if (latch != lastLatch)
     {

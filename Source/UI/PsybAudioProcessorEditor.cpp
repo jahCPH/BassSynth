@@ -38,13 +38,33 @@ PsybAudioProcessorEditor::PsybAudioProcessorEditor (PsybAudioProcessor& p)
     addKnob ("r_asus", "AMP SUS");
     addKnob ("r_arel", "AMP REL");
     addKnob ("r_drive", "DRIVE");
+    addKnob ("r_level", "ROLL LEVEL");
     addKnob ("b_sublevel", "SUB");
     addKnob ("b_output", "OUTPUT");
+    addKnob ("s_cutoff", "SLIDE CUT");
+    addKnob ("s_reso", "SLIDE RESO");
+    addKnob ("s_glide_seq", "GLIDE");
+    addKnob ("s_glide_ms", "GLIDE MS");
+    addKnob ("s_accent", "ACCENT");
+    addKnob ("s_envamt", "SLIDE ENV");
+    addKnob ("s_fdec", "SLIDE FDEC");
+    addKnob ("s_adec", "SLIDE ADEC");
+    addKnob ("s_drive", "SLIDE DRIVE");
+    addKnob ("s_level", "SLIDE LEVEL");
+    addToggle ("r_on", "ROLL ON");
     addToggle ("r_phasereset", "PHASE RESET");
     addToggle ("r_filterreset", "FILTER RESET");
+    addToggle ("s_on", "SLIDE ON");
+    addToggle ("s_phasereset", "SLIDE PHASE");
+    addToggle ("s_filterreset", "SLIDE FILTER");
     addToggle ("q_latch", "LATCH");
 
-    setSize (560, 520);
+    subOwner.addItemList ({ "SUB ROLL", "SUB SLIDE", "SUB OFF" }, 1);
+    addAndMakeVisible (subOwner);
+    subOwnerAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (
+        synth.parameters(), "b_subowner", subOwner);
+
+    setSize (640, 860);
 }
 
 PsybAudioProcessorEditor::~PsybAudioProcessorEditor() = default;
@@ -61,10 +81,11 @@ void PsybAudioProcessorEditor::resized()
     for (auto& knob : knobs)
     {
         auto row = area.removeFromTop (rowH);
-        knob->label.setBounds (row.removeFromLeft (92));
+        knob->label.setBounds (row.removeFromLeft (110));
         knob->slider.setBounds (row);
     }
     area.removeFromTop (8);
     for (auto& toggle : toggles)
         toggle->button.setBounds (area.removeFromTop (rowH));
+    subOwner.setBounds (area.removeFromTop (rowH));
 }

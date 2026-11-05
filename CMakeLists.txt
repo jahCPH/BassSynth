@@ -92,7 +92,7 @@ target_link_libraries(BassSynth
         juce::juce_recommended_warning_flags)
 
 if(BASSSYNTH_BUILD_TESTS)
-    add_executable(BassSynthTests Tests/SeqTests.cpp Tests/RollTests.cpp)
+    add_executable(BassSynthTests Tests/SeqTests.cpp Tests/RollTests.cpp Tests/SlideTests.cpp)
     target_link_libraries(BassSynthTests PRIVATE psyb_dsp)
     target_compile_features(BassSynthTests PRIVATE cxx_std_17)
 endif()
