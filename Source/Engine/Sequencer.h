@@ -1,8 +1,9 @@
 #pragma once
 
-#include "Engine/RollVoice.h"
+#include "Engine/EngineModule.h"
 
 #include <cstdint>
+#include <memory>
 
 namespace psyb
 {
@@ -15,7 +16,6 @@ constexpr int kMaxTriggers = 64;
 enum class SourceMode : int { Seq = 0, Midi = 1 };
 enum class ArpOrder : int { Up = 0, Down = 1, UpDown = 2, AsPlayed = 3, Random = 4 };
 enum class DuckSource : int { Internal = 0, Midi = 1, Audio = 2 };
-enum class SubOwner : int { Roll = 0, Slide = 1, Off = 2 };
 
 struct Step
 {
@@ -91,6 +91,8 @@ int clampMidi (int note);
 class PsyEngine
 {
 public:
+    PsyEngine();
+
     void reset();
     void loadInit();
 
@@ -108,6 +110,8 @@ public:
     void setSubOwner (SubOwner owner);
     void setSlideAccent (float amount01);
     void setLaneGlide (int engine, float seqFraction, float midiMs);
+    void setStoredAlgorithmVersion (int engine, int version);
+    int storedAlgorithmVersion (int engine) const;
     LaneConfig lane (int engine) const;
     Step step (int engine, int index) const;
 
@@ -123,26 +127,6 @@ public:
     float voiceEnv (int engine) const;
 
 private:
-    struct Voice
-    {
-        bool used = false;
-        bool releasing = false;
-        int note = 60;
-        double phase = 0.0;
-        double env = 0.0;
-        double releaseEnv = 0.0;
-        int life = 0;
-        int releaseLife = 0;
-        bool gliding = false;
-        double glideFrom = 60.0;
-        double glideTo = 60.0;
-        int glideSamples = 0;
-        int glidePos = 0;
-        bool tail = false;
-        int tailLeft = 0;
-        int fadeSpan = 1;
-    };
-
     struct Arp
     {
         int index = 0;
@@ -155,16 +139,13 @@ private:
         LaneConfig cfg {};
         Step steps[kMaxSteps] {};
         Arp arp {};
-        Voice active {};
-        Voice tail {};
         bool pendingOff = false;
         double pendingOffPpq = 0.0;
         SourceMode applied = SourceMode::Seq;
         int lastArpNote = 60;
-        Voice stolen {};
     };
 
-    double renderRate = 48000.0;
+    static constexpr int kAlignCap = 64;
 
     void clearVoices();
     void noteOn (int sample, int channel, int note, int velocity);
@@ -173,14 +154,21 @@ private:
     void fireStep (int engine, int64_t absoluteStep, int sample, double startPpq, double endPpq, const Block& block);
     void releaseEngine (int engine, int sample, bool seqOnly);
     void releaseOpenTies();
-    void startVoice (int engine, int sample, int note, bool retrigger, const GlideInfo& glide, float glideMs, bool accented);
-    bool ownsSub (int engine) const;
-    RollVoice* bassVoices (int engine);
-    void updateEngineGain (int engine);
+    void startVoice (int engine, int sample, int note, int velocity, bool retrigger, const GlideInfo& glide, float glideMs, bool accented);
     void renderSample (float& out);
+    float takeAligned (int engine, float sample);
     int pickNote (int engine);
     void advanceArp (int engine);
     void retargetArp (int engine);
+
+    std::unique_ptr<EngineModule> engines[kEngineCount];
+    int busLatency = 0;
+    float alignBuf[kEngineCount][kAlignCap] {};
+    int alignPos[kEngineCount] {};
+    int algoStored[kEngineCount] = { 1, 1, 1 };
+    float busOutputDb = 0.f;
+
+    double renderRate = 48000.0;
 
     DuckSource duckSource = DuckSource::Internal;
     int duckNote = 36;
@@ -202,20 +190,7 @@ private:
     Trigger triggers[kMaxTriggers] {};
     int triggersN = 0;
     bool transportWasPlaying = false;
-    RollParams rollTarget {};
-    RollParams slideTarget {};
-    bool rollPrimed = false;
-    bool slidePrimed = false;
-    RollVoice rollVoice[3] {};
-    RollVoice slideVoice[3] {};
-    bool engineAudible[2] = { true, false };
-    float engineLevelDb[2] = { 0.f, 0.f };
-    float engineGain[2] = { 1.f, 0.f };
-    float engineGainSm[2] = { 1.f, 0.f };
-    bool engineGainPrimed[2] = { false, false };
-    float engineGainCoef = 0.f;
     SubOwner subOwner = SubOwner::Roll;
-    float slideAccent = 0.5f;
 };
 
 } // namespace psyb

@@ -1,4 +1,5 @@
 #include "Engine/Sequencer.h"
+#include "Engine/EngineFactory.h"
 
 #include <algorithm>
 #include <cmath>
@@ -14,13 +15,6 @@ namespace psyb
 {
 namespace
 {
-constexpr double kAttackSec = 0.0005;
-constexpr double kDecaySec = 0.070;
-constexpr double kReleaseSec = 0.012;
-constexpr double kTailSec = 0.002;
-constexpr double kStealSec = 0.0003;
-constexpr double kSilence = 1.0e-3;
-
 /** Flush denormals for the audio callback. JUCE-free so the DSP lib and the
     headless tests get the same protection as the plugin's ScopedNoDenormals. */
 struct FlushDenormals
@@ -50,36 +44,18 @@ struct FlushDenormals
 #endif
 };
 
-double midiFreq (double note)
-{
-    return 440.0 * std::pow (2.0, (note - 69.0) / 12.0);
-}
-
-int samplesFor (double seconds, double rate)
-{
-    return std::max (1, static_cast<int> (std::lround (seconds * rate)));
-}
-
-RollParams slideInitParams()
-{
-    RollParams params;
-    params.cutoffHz = 1200.f;
-    params.reso = 0.45f;
-    params.envAmt = 0.50f;
-    params.fatkMs = 0.5f;
-    params.fdecMs = 250.f;
-    params.fsus = 0.f;
-    params.aatkMs = 0.5f;
-    params.adecMs = 300.f;
-    params.asus = 0.f;
-    params.arelMs = 40.f;
-    params.drive = 0.15f;
-    params.sub = 0.70f;
-    params.phaseReset = true;
-    params.filterReset = false;
-    return params;
-}
 } // namespace
+
+PsyEngine::PsyEngine()
+{
+    auto made = createEngines();
+    const int n = std::min (kEngineCount, static_cast<int> (made.size()));
+    for (int i = 0; i < n; ++i)
+        engines[static_cast<size_t> (i)] = std::move (made[static_cast<size_t> (i)]);
+    for (int i = 0; i < kEngineCount; ++i)
+        if (engines[static_cast<size_t> (i)] != nullptr)
+            busLatency = std::max (busLatency, engines[static_cast<size_t> (i)]->latencySamples());
+}
 
 double stepStartPpq (int64_t stepIndex, double rateQuarters, double swing)
 {
@@ -113,27 +89,21 @@ void PsyEngine::reset()
     triggersN = 0;
     transportWasPlaying = false;
     renderRate = 48000.0;
-    rollTarget = {};
-    slideTarget = slideInitParams();
-    rollPrimed = false;
-    slidePrimed = false;
     subOwner = SubOwner::Roll;
-    slideAccent = 0.5f;
-    engineAudible[0] = true;
-    engineAudible[1] = false;
-    engineLevelDb[0] = 0.f;
-    engineLevelDb[1] = 0.f;
-    engineGain[0] = 1.f;
-    engineGain[1] = 0.f;
-    engineGainSm[0] = 1.f;
-    engineGainSm[1] = 0.f;
-    engineGainPrimed[0] = false;
-    engineGainPrimed[1] = false;
-    engineGainCoef = 0.f;
-    for (auto& voice : rollVoice)
-        voice.reset();
-    for (auto& voice : slideVoice)
-        voice.reset();
+    busOutputDb = 0.f;
+    for (int i = 0; i < kEngineCount; ++i)
+    {
+        algoStored[i] = 1;
+        alignPos[i] = 0;
+        for (int s = 0; s < kAlignCap; ++s)
+            alignBuf[i][s] = 0.f;
+        if (engines[static_cast<size_t> (i)] != nullptr)
+        {
+            engines[static_cast<size_t> (i)]->reset();
+            engines[static_cast<size_t> (i)]->setAccentAmount (0.5f);
+            engines[static_cast<size_t> (i)]->setSubOwner (subOwner);
+        }
+    }
     std::fill (&route[0][0], &route[0][0] + 16 * 128, static_cast<uint8_t> (0));
     for (int e = 0; e < kEngineCount; ++e)
     {
@@ -177,64 +147,68 @@ void PsyEngine::setLatch (bool on)
 void PsyEngine::setDuckSource (DuckSource source) { duckSource = source; }
 void PsyEngine::setDuckNote (int note) { duckNote = note; }
 void PsyEngine::setGlobalSwing (double swing) { globalSwing = std::clamp (swing, 0.0, 0.75); }
-void PsyEngine::setLane (int engine, const LaneConfig& lane) { lanes[engine].cfg = lane; }
+void PsyEngine::setLane (int engine, const LaneConfig& lane)
+{
+    lanes[engine].cfg = lane;
+    if (engine >= 0 && engine < kEngineCount && engines[static_cast<size_t> (engine)] != nullptr)
+        engines[static_cast<size_t> (engine)]->setEnabled (lane.enabled);
+}
 void PsyEngine::setStep (int engine, int index, const Step& step) { lanes[engine].steps[index] = step; }
 
 void PsyEngine::setRollParams (const RollParams& params)
 {
-    if (! rollPrimed)
-    {
-        for (auto& voice : rollVoice)
-            voice.prime (params);
-        rollPrimed = true;
-    }
-    rollTarget = params;
+    busOutputDb = params.outputDb;
+    if (engines[0] != nullptr)
+        engines[0]->setParams (params);
 }
 
 void PsyEngine::setSlideParams (const RollParams& params)
 {
-    if (! slidePrimed)
-    {
-        for (auto& voice : slideVoice)
-            voice.prime (params);
-        slidePrimed = true;
-    }
-    slideTarget = params;
-}
-
-void PsyEngine::updateEngineGain (int engine)
-{
-    // −60 dB is the bottom of the level slider and means mute.
-    float target = 0.f;
-    if (engineAudible[engine] && engineLevelDb[engine] > -60.f)
-        target = std::pow (10.f, engineLevelDb[engine] / 20.f);
-    engineGain[engine] = target;
-    if (! engineGainPrimed[engine])
-    {
-        engineGainSm[engine] = target;
-        engineGainPrimed[engine] = true;
-    }
+    if (engines[1] != nullptr)
+        engines[1]->setParams (params);
 }
 
 void PsyEngine::setEngineAudible (int engine, bool on)
 {
-    if (engine < 0 || engine >= 2)
+    if (engine < 0 || engine >= kEngineCount || engines[static_cast<size_t> (engine)] == nullptr)
         return;
-    engineAudible[engine] = on;
-    updateEngineGain (engine);
+    engines[static_cast<size_t> (engine)]->setAudible (on);
 }
 
 void PsyEngine::setEngineLevelDb (int engine, float db)
 {
-    if (engine < 0 || engine >= 2)
+    if (engine < 0 || engine >= kEngineCount || engines[static_cast<size_t> (engine)] == nullptr)
         return;
-    engineLevelDb[engine] = db;
-    updateEngineGain (engine);
+    engines[static_cast<size_t> (engine)]->setLevelDb (db);
 }
 
-void PsyEngine::setSubOwner (SubOwner owner) { subOwner = owner; }
+void PsyEngine::setSubOwner (SubOwner owner)
+{
+    subOwner = owner;
+    for (int e = 0; e < kEngineCount; ++e)
+        if (engines[static_cast<size_t> (e)] != nullptr)
+            engines[static_cast<size_t> (e)]->setSubOwner (owner);
+}
 
-void PsyEngine::setSlideAccent (float amount01) { slideAccent = std::clamp (amount01, 0.f, 1.f); }
+void PsyEngine::setSlideAccent (float amount01)
+{
+    for (int e = 0; e < kEngineCount; ++e)
+        if (engines[static_cast<size_t> (e)] != nullptr)
+            engines[static_cast<size_t> (e)]->setAccentAmount (amount01);
+}
+
+void PsyEngine::setStoredAlgorithmVersion (int engine, int version)
+{
+    if (engine >= 0 && engine < kEngineCount)
+        algoStored[engine] = version;
+}
+
+int PsyEngine::storedAlgorithmVersion (int engine) const
+{
+    if (engine < 0 || engine >= kEngineCount)
+        return 1;
+    return algoStored[engine];
+}
 
 void PsyEngine::setLaneGlide (int engine, float seqFraction, float midiMs)
 {
@@ -244,23 +218,6 @@ void PsyEngine::setLaneGlide (int engine, float seqFraction, float midiMs)
     lanes[engine].cfg.midiGlideMs = std::max (0.f, midiMs);
 }
 
-RollVoice* PsyEngine::bassVoices (int engine)
-{
-    if (engine == 0)
-        return rollVoice;
-    if (engine == 1)
-        return slideVoice;
-    return nullptr;
-}
-
-bool PsyEngine::ownsSub (int engine) const
-{
-    if (subOwner == SubOwner::Off)
-        return false;
-    if (subOwner == SubOwner::Slide)
-        return engine == 1;
-    return engine == 0;
-}
 LaneConfig PsyEngine::lane (int engine) const { return lanes[engine].cfg; }
 Step PsyEngine::step (int engine, int index) const { return lanes[engine].steps[index]; }
 
@@ -268,12 +225,8 @@ int PsyEngine::soundingVoices() const
 {
     int n = 0;
     for (int e = 0; e < kEngineCount; ++e)
-    {
-        if (lanes[e].active.used && lanes[e].active.env > kSilence)
-            ++n;
-        if (lanes[e].tail.used && lanes[e].tail.env > kSilence)
-            ++n;
-    }
+        if (engines[static_cast<size_t> (e)] != nullptr)
+            n += engines[static_cast<size_t> (e)]->soundingCount();
     return n;
 }
 
@@ -284,34 +237,30 @@ int PsyEngine::heldCount() const { return nHeld; }
 
 bool PsyEngine::voiceActive (int engine) const
 {
-    const auto& v = lanes[engine].active;
-    return v.used && ! v.releasing;
+    return engines[static_cast<size_t> (engine)] != nullptr && engines[static_cast<size_t> (engine)]->voiceActive();
 }
 
 bool PsyEngine::voiceReleasing (int engine) const
 {
-    return lanes[engine].active.used && lanes[engine].active.releasing;
+    return engines[static_cast<size_t> (engine)] != nullptr && engines[static_cast<size_t> (engine)]->voiceReleasing();
 }
 
 float PsyEngine::voiceEnv (int engine) const
 {
-    return static_cast<float> (lanes[engine].active.env);
+    if (engines[static_cast<size_t> (engine)] == nullptr)
+        return 0.f;
+    return engines[static_cast<size_t> (engine)]->voiceEnv();
 }
 
 void PsyEngine::clearVoices()
 {
     for (int e = 0; e < kEngineCount; ++e)
     {
-        lanes[e].active = {};
-        lanes[e].tail = {};
         lanes[e].pendingOff = false;
-        lanes[e].stolen = {};
         midiStackN[e] = 0;
+        if (engines[static_cast<size_t> (e)] != nullptr)
+            engines[static_cast<size_t> (e)]->allNotesOff (true);
     }
-    for (auto& voice : rollVoice)
-        voice.reset();
-    for (auto& voice : slideVoice)
-        voice.reset();
 }
 
 void PsyEngine::retargetArp (int engine)
@@ -366,7 +315,7 @@ void PsyEngine::noteOn (int sample, int channel, int note, int velocity)
             continue;
 
         auto& nstack = midiStackN[e];
-        const bool overlap = nstack > 0 && lanes[e].active.used && ! lanes[e].active.releasing;
+        const bool overlap = nstack > 0 && voiceActive (e);
         if (nstack < 8)
             midiStack[e][nstack++] = note;
 
@@ -378,7 +327,7 @@ void PsyEngine::noteOn (int sample, int channel, int note, int velocity)
             glide.effectiveMs = glide.requestedMs;
             glide.clamped = false;
         }
-        startVoice (e, sample, note, ! overlap, glide, overlap ? lanes[e].cfg.midiGlideMs : 0.f, false);
+        startVoice (e, sample, note, velocity, ! overlap, glide, overlap ? lanes[e].cfg.midiGlideMs : 0.f, false);
     }
     (void) sample;
 }
@@ -445,14 +394,10 @@ void PsyEngine::noteOff (int sample, int channel, int note)
             glide.applies = true;
             glide.requestedMs = lanes[e].cfg.midiGlideMs;
             glide.effectiveMs = glide.requestedMs;
-            startVoice (e, sample, back, false, glide, lanes[e].cfg.midiGlideMs, false);
+            startVoice (e, sample, back, 0, false, glide, lanes[e].cfg.midiGlideMs, false);
         }
-        else if (lanes[e].active.used && ! lanes[e].active.releasing)
-        {
-            lanes[e].active.releasing = true;
-            lanes[e].active.releaseLife = 0;
-            lanes[e].active.releaseEnv = lanes[e].active.env;
-        }
+        else if (voiceActive (e) && engines[static_cast<size_t> (e)] != nullptr)
+            engines[static_cast<size_t> (e)]->noteOff();
     }
 
     releaseOpenTies();
@@ -474,15 +419,8 @@ void PsyEngine::allNotesOff (int, bool hard)
     {
         lanes[e].pendingOff = false;
         midiStackN[e] = 0;
-        Voice* slots[3] = { &lanes[e].active, &lanes[e].tail, &lanes[e].stolen };
-        for (auto* v : slots)
-        {
-            if (! v->used || v->releasing)
-                continue;
-            v->releasing = true;
-            v->releaseLife = 0;
-            v->releaseEnv = v->env;
-        }
+        if (engines[static_cast<size_t> (e)] != nullptr)
+            engines[static_cast<size_t> (e)]->releaseAll();
     }
 }
 
@@ -493,15 +431,8 @@ void PsyEngine::releaseEngine (int engine, int, bool seqOnly)
         return;
 
     lane.pendingOff = false;
-    Voice* slots[3] = { &lane.active, &lane.tail, &lane.stolen };
-    for (auto* v : slots)
-    {
-        if (! v->used || v->releasing)
-            continue;
-        v->releasing = true;
-        v->releaseLife = 0;
-        v->releaseEnv = v->env;
-    }
+    if (engines[static_cast<size_t> (engine)] != nullptr)
+        engines[static_cast<size_t> (engine)]->releaseAll();
 }
 
 void PsyEngine::releaseOpenTies()
@@ -514,11 +445,10 @@ void PsyEngine::releaseOpenTies()
         auto& lane = lanes[e];
         if (lane.cfg.source != SourceMode::Seq || lane.pendingOff)
             continue;
-        if (! lane.active.used || lane.active.releasing)
+        if (! voiceActive (e))
             continue;
-        lane.active.releasing = true;
-        lane.active.releaseLife = 0;
-        lane.active.releaseEnv = lane.active.env;
+        if (engines[static_cast<size_t> (e)] != nullptr)
+            engines[static_cast<size_t> (e)]->noteOff();
     }
 }
 
@@ -565,9 +495,8 @@ void PsyEngine::advanceArp (int engine)
     }
 }
 
-void PsyEngine::startVoice (int engine, int sample, int note, bool retrigger, const GlideInfo& glide, float glideMs, bool accented)
+void PsyEngine::startVoice (int engine, int sample, int note, int velocity, bool retrigger, const GlideInfo& glide, float glideMs, bool accented)
 {
-    auto& lane = lanes[engine];
     if (triggersN < kMaxTriggers)
     {
         Trigger t;
@@ -579,77 +508,11 @@ void PsyEngine::startVoice (int engine, int sample, int note, bool retrigger, co
         triggers[triggersN++] = t;
     }
 
-    if (! retrigger && lane.active.used && ! lane.active.releasing)
-    {
-        lane.active.gliding = glideMs > 0.f;
-        lane.active.glideFrom = static_cast<double> (lane.active.note);
-        lane.active.glideTo = static_cast<double> (note);
-        lane.active.glidePos = 0;
-        lane.active.glideSamples = std::max (1, static_cast<int> (std::lround (glideMs * 0.001 * renderRate)));
-        lane.active.note = note;
+    if (engines[static_cast<size_t> (engine)] == nullptr)
         return;
-    }
-
-    // Two audible slots, plus the stolen tail for one short ramp.
-    // The new voice still starts on this sample.
-    const bool hadActive = lane.active.used;
-    if (lane.tail.used)
-    {
-        lane.stolen = lane.tail;
-        lane.stolen.tail = true;
-        lane.stolen.releasing = true;
-        lane.stolen.releaseLife = 0;
-        lane.stolen.releaseEnv = lane.stolen.env;
-        lane.stolen.tailLeft = samplesFor (kStealSec, renderRate);
-        lane.stolen.fadeSpan = lane.stolen.tailLeft;
-        if (RollVoice* bass = bassVoices (engine))
-        {
-            bass[2] = bass[1];
-            bass[2].beginFade (lane.stolen.tailLeft);
-        }
-    }
-    if (hadActive)
-    {
-        lane.tail = lane.active;
-        lane.tail.tail = true;
-        lane.tail.releasing = true;
-        lane.tail.releaseLife = 0;
-        lane.tail.releaseEnv = lane.tail.env;
-        lane.tail.tailLeft = samplesFor (kTailSec, renderRate);
-        lane.tail.fadeSpan = lane.tail.tailLeft;
-        if (RollVoice* bass = bassVoices (engine))
-        {
-            bass[1] = bass[0];
-            bass[1].beginFade (lane.tail.tailLeft);
-        }
-    }
-
-    lane.active = {};
-    lane.active.used = true;
-    lane.active.note = note;
-    lane.pendingOff = false;
-    if (RollVoice* bass = bassVoices (engine))
-    {
-        const RollParams& target = engine == 0 ? rollTarget : slideTarget;
-        RollVoice born;
-        if (hadActive)
-            born.copySmoothingFrom (bass[1]);
-        else
-        {
-            RollParams primed = target;
-            if (! ownsSub (engine))
-                primed.sub = 0.f;
-            born.prime (primed);
-        }
-        born.start (target.phaseReset, target.filterReset, hadActive ? &bass[1] : nullptr);
-        if (engine == 1 && accented)
-        {
-            const float amount = std::clamp (slideAccent, 0.f, 1.f);
-            born.setAccent (std::pow (10.f, amount * 8.f / 20.f), amount * 0.60f);
-        }
-        bass[0] = born;
-    }
-    (void) sample;
+    const bool legato = engines[static_cast<size_t> (engine)]->noteOn (sample, note, velocity, retrigger, glideMs, accented);
+    if (! legato)
+        lanes[engine].pendingOff = false;
 }
 
 void PsyEngine::fireStep (int engine, int64_t absoluteStep, int sample, double startPpq, double endPpq, const Block& block)
@@ -699,7 +562,7 @@ void PsyEngine::fireStep (int engine, int64_t absoluteStep, int sample, double s
         glide.clamped = glide.requestedMs > gateMs + 0.01f;
     }
 
-    startVoice (engine, sample, note, ! prevTie, glide, glide.effectiveMs, st.accent);
+    startVoice (engine, sample, note, st.velocity, ! prevTie, glide, glide.effectiveMs, st.accent);
 
     // A tie holds only when the next step is on. Otherwise the note ends
     // at this step's end, including a rest at the pattern wrap.
@@ -711,125 +574,47 @@ void PsyEngine::fireStep (int engine, int64_t absoluteStep, int sample, double s
     }
 }
 
+float PsyEngine::takeAligned (int engine, float sample)
+{
+    const int delay = busLatency - (engines[static_cast<size_t> (engine)] != nullptr
+                                         ? engines[static_cast<size_t> (engine)]->latencySamples()
+                                         : 0);
+    if (delay <= 0)
+        return sample;
+    const int pos = alignPos[engine];
+    const float delayed = alignBuf[engine][pos];
+    alignBuf[engine][pos] = sample;
+    alignPos[engine] = pos + 1 < delay ? pos + 1 : 0;
+    return delayed;
+}
+
 void PsyEngine::renderSample (float& out)
 {
     out = 0.f;
-    const int attackN = samplesFor (kAttackSec, renderRate);
-    const int decayN = samplesFor (kDecaySec, renderRate);
-    const int releaseN = samplesFor (kReleaseSec, renderRate);
-
-    const float gainCoef = engineGainCoef > 0.f
-                               ? engineGainCoef
-                               : 1.f - std::exp (-1.f / (0.008f * static_cast<float> (renderRate)));
-    for (int e = 0; e < 2; ++e)
-    {
-        engineGainSm[e] += (engineGain[e] - engineGainSm[e]) * gainCoef;
-        if (engineGain[e] == 0.f && std::abs (engineGainSm[e]) < 1.0e-6f)
-            engineGainSm[e] = 0.f;
-    }
-
     for (int e = 0; e < kEngineCount; ++e)
     {
-        auto& lane = lanes[e];
-        Voice* slots[3] = { &lane.active, &lane.tail, &lane.stolen };
-        if (RollVoice* bass = bassVoices (e))
+        auto* engine = engines[static_cast<size_t> (e)].get();
+        if (engine == nullptr)
+            continue;
+
+        // A zero-delay engine multiplies into the running sum, same fused
+        // multiply-add as the pre-module mixer. Rounding into a private
+        // buffer first moves the sum by one float when the gain is not 1.
+        const int delay = busLatency - engine->latencySamples();
+        if (delay <= 0)
         {
-            const bool live = lane.active.used || lane.tail.used || lane.stolen.used;
-            const bool muted = ! engineAudible[e] && engineGainSm[e] == 0.f;
-            if ((muted && ! live) || (! lane.cfg.enabled && ! live))
-                continue;
-            RollParams params = e == 0 ? rollTarget : slideTarget;
-            if (! ownsSub (e))
-                params.sub = 0.f;
-            for (int s = 0; s < 3; ++s)
-            {
-                auto* v = slots[s];
-                if (! v->used)
-                    continue;
-                auto& rv = bass[s];
-                if (v->releasing && ! rv.isReleasing())
-                    rv.release();
-
-                double note = static_cast<double> (v->note);
-                if (v->gliding && v->glideSamples > 0)
-                {
-                    const double t = std::min (1.0, static_cast<double> (v->glidePos) / static_cast<double> (v->glideSamples));
-                    note = v->glideFrom + (v->glideTo - v->glideFrom) * t;
-                    ++v->glidePos;
-                }
-
-                float sample = rv.process (params, renderRate, static_cast<float> (midiFreq (note)));
-                v->env = rv.ampLevel();
-                if (rv.fadeFinished() || (v->releasing && v->env < kSilence))
-                {
-                    *v = {};
-                    rv.reset();
-                    continue;
-                }
-                if (engineGainSm[e] != 0.f)
-                    out += sample * engineGainSm[e];
-            }
+            if (! engine->isSilent())
+                engine->render (&out, 1);
             continue;
         }
 
-        if (! lane.cfg.enabled)
-            continue;
-
-        for (auto* v : slots)
-        {
-            if (! v->used)
-                continue;
-
-            if (! v->releasing && v->life < attackN)
-                v->env = static_cast<double> (v->life + 1) / static_cast<double> (attackN);
-            else if (! v->releasing)
-            {
-                const double t = static_cast<double> (v->life - attackN) / static_cast<double> (decayN);
-                v->env = std::pow (0.001, std::max (0.0, t));
-            }
-            else
-            {
-                v->env = v->releaseEnv * std::pow (0.001, static_cast<double> (v->releaseLife) / static_cast<double> (releaseN));
-                ++v->releaseLife;
-            }
-            ++v->life;
-
-            double note = static_cast<double> (v->note);
-            if (v->gliding && v->glideSamples > 0)
-            {
-                const double t = std::min (1.0, static_cast<double> (v->glidePos) / static_cast<double> (v->glideSamples));
-                note = v->glideFrom + (v->glideTo - v->glideFrom) * t;
-                ++v->glidePos;
-            }
-
-            v->phase += midiFreq (note) / renderRate;
-            v->phase -= std::floor (v->phase);
-            float sample = static_cast<float> (std::sin (v->phase * 6.283185307179586) * v->env * 0.2);
-
-            if (v->tail)
-            {
-                const int span = std::max (1, v->fadeSpan);
-                const float g = std::clamp (static_cast<float> (v->tailLeft) / static_cast<float> (span), 0.f, 1.f);
-                sample *= 0.5f * (1.f - std::cos (g * 3.14159265f));
-                --v->tailLeft;
-                if (v->tailLeft <= 0)
-                {
-                    *v = {};
-                    continue;
-                }
-            }
-
-            if (v->releasing && v->env < kSilence)
-            {
-                *v = {};
-                continue;
-            }
-
-            out += sample;
-        }
+        float part = 0.f;
+        if (! engine->isSilent())
+            engine->render (&part, 1);
+        out += takeAligned (e, part);
     }
 
-    const float outputGain = std::pow (10.f, rollTarget.outputDb / 20.f);
+    const float outputGain = std::pow (10.f, busOutputDb / 20.f);
     out *= outputGain;
 }
 
@@ -841,11 +626,13 @@ void PsyEngine::process (const Block& block, const MidiIn* midi, int midiCount, 
 
     const FlushDenormals flushDenormals;
     renderRate = block.sampleRate;
-    engineGainCoef = 1.f - std::exp (-1.f / (0.008f * static_cast<float> (block.sampleRate)));
-    for (auto& voice : rollVoice)
-        voice.prepareBlock (rollTarget, block.sampleRate);
-    for (auto& voice : slideVoice)
-        voice.prepareBlock (slideTarget, block.sampleRate);
+    for (int e = 0; e < kEngineCount; ++e)
+    {
+        if (engines[static_cast<size_t> (e)] == nullptr)
+            continue;
+        engines[static_cast<size_t> (e)]->setEnabled (lanes[e].cfg.enabled);
+        engines[static_cast<size_t> (e)]->prepare (block.sampleRate, block.numSamples);
+    }
 
     for (int e = 0; e < kEngineCount; ++e)
     {
@@ -899,12 +686,8 @@ void PsyEngine::process (const Block& block, const MidiIn* midi, int midiCount, 
                     if (offSample <= s)
                     {
                         lane.pendingOff = false;
-                        if (lane.cfg.source == SourceMode::Seq && lane.active.used && ! lane.active.releasing)
-                        {
-                            lane.active.releasing = true;
-                            lane.active.releaseLife = 0;
-                            lane.active.releaseEnv = lane.active.env;
-                        }
+                        if (lane.cfg.source == SourceMode::Seq && voiceActive (e))
+                            engines[static_cast<size_t> (e)]->noteOff();
                     }
                 }
 

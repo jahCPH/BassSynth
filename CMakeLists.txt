@@ -60,8 +60,12 @@ juce_generate_juce_header(BassSynth)
 
 add_library(psyb_dsp STATIC
     Source/Dsp/ReportedLatency.cpp
-    Source/Engine/Sequencer.cpp
-    Source/Engine/RollVoice.cpp)
+    Source/Dsp/Pitch.cpp
+    Source/Dsp/RollVoice.cpp
+    Source/Engine/BassEngine.cpp
+    Source/Engine/SineEngine.cpp
+    Source/Engine/EngineFactory.cpp
+    Source/Engine/Sequencer.cpp)
 
 target_include_directories(psyb_dsp PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/Source")
 target_compile_features(psyb_dsp PUBLIC cxx_std_17)
@@ -92,7 +96,8 @@ target_link_libraries(BassSynth
         juce::juce_recommended_warning_flags)
 
 if(BASSSYNTH_BUILD_TESTS)
-    add_executable(BassSynthTests Tests/SeqTests.cpp Tests/RollTests.cpp Tests/SlideTests.cpp)
+    add_executable(BassSynthTests Tests/SeqTests.cpp Tests/RollTests.cpp Tests/SlideTests.cpp Tests/ModuleTests.cpp)
     target_link_libraries(BassSynthTests PRIVATE psyb_dsp)
     target_compile_features(BassSynthTests PRIVATE cxx_std_17)
+    target_compile_definitions(BassSynthTests PRIVATE BASSSYNTH_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 endif()
