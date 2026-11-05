@@ -9,6 +9,8 @@ step glide FOLLOW/OVERRIDE, parameter table completed (draft IDs), duck NO BUS v
 **Rev 0.1.2:** MONO LOW redesigned as a side-channel high-pass (transparent for mono by construction), QUALITY
 placement noted. Prompted by Astra's UI study 02 caveat.
 **Rev 0.1.3:** L1 decided by Linus (2026-11-04): 7-day trial + Moonbase licensing, no separate beta expiry.
+**Rev 0.1.7:** engine module interface (§5.0) and per-engine algorithm versions (§10), approved by Linus
+(2026-11-05) so engines can be improved independently after release.
 **Rev 0.1.6:** filter-decay IDs normalised to `*_fdec` (matches `*_adec`); no `*_fdecay`/`*_adecay` IDs exist.
 **Rev 0.1.5:** product name is **PsyRoot** (display only; identifiers stay name-neutral). "Psy.b" below = PsyRoot.
 **Rev 0.1.4:** Q1–Q3 decided by Linus (2026-11-04): arp order list, LATCH added, per-step pitch offset kept,
@@ -197,6 +199,19 @@ modulation and the arp still differ between hits.
 
 ## 5. Engines
 
+### 5.0 Engine module interface
+Each engine is a self-contained module behind one interface; the sequencer, router and bus never branch on the
+engine index. Shape (names are Cursor's call):
+- `prepare(sampleRate, maxBlock)`, `reset()`, `setParams(const EngineParams&)` (block rate, plain struct).
+- `noteOn(sample, note, velocity, retrigger, glide, accent)`, `noteOff(sample)`, `allNotesOff()`.
+- `render(float* mono, int n)` adds into the engine bus; owns its voices, slots, tails, oversampling and gain ramp.
+- `latencySamples()`; the engine host aligns all engines to the largest (today all = 64).
+- `isSilent()` so the host can skip rendering an engine that is off with no live voices.
+- `algorithmVersion()` (see §10).
+Rules: one engine per source file pair; shared DSP (bass voice, ladder, halfband, envelopes) lives in `Dsp/`;
+no engine reads APVTS or another engine's state; the engine count is a constant in one place.
+ROLLING and SLIDING are two instances of the bass module with different params; FX is its own module.
+
 ### 5.1 Common blocks
 - **Oscillators:** band-limited saw/square with polyBLEP (polyBLAMP for hard sync later). Phase-reset safe.
 - **Sub:** sine one octave below (option: same octave), level 0–100%, generated only in the SUB OWNER engine,
@@ -366,6 +381,11 @@ Pattern data (steps) is **not** APVTS; it is stored in the state blob (§10) and
 - `setStateInformation`: reject blobs > 1 MB, clamp every value to its range, fill missing fields with
   defaults (Vizuator `PluginStateSanitize` pattern). Unknown future fields are ignored, not fatal.
 - Loading state while playing: release all voices, clear routing table, swap pattern at the block start.
+- **Engine algorithm versions:** state stores `algo_r` / `algo_s` / `algo_f` (int, start at 1). An engine change
+  that alters the sound of an existing setting bumps that engine's version; old state loads with its saved
+  version and keeps the old algorithm, new instances get the latest. Allowed changes without a bump:
+  bug fixes for clicks/aliasing/denormals, CPU work that is bit-identical or below −90 dB difference.
+  Before 1.0 we stay on version 1 and change freely.
 
 ---
 
