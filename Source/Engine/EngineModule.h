@@ -22,6 +22,7 @@ public:
     virtual void setLevelDb (float db) = 0;
     virtual void setSubOwner (SubOwner owner) = 0;
     virtual void setAccentAmount (float amount01) = 0;
+    virtual void setDuckGain (float gain) = 0;
 
     /** Returns true when the previous note keeps sounding and only the pitch moves. */
     virtual bool noteOn (int sample, int note, int velocity, bool retrigger, float glideMs, bool accented) = 0;

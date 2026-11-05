@@ -1,5 +1,7 @@
 #include "UI/PsybAudioProcessorEditor.h"
 
+#include <algorithm>
+
 PsybAudioProcessorEditor::PsybAudioProcessorEditor (PsybAudioProcessor& p)
     : AudioProcessorEditor (&p), synth (p)
 {
@@ -58,16 +60,55 @@ PsybAudioProcessorEditor::PsybAudioProcessorEditor (PsybAudioProcessor& p)
     addToggle ("s_phasereset", "SLIDE PHASE");
     addToggle ("s_filterreset", "SLIDE FILTER");
     addToggle ("q_latch", "LATCH");
+    addKnob ("b_duck_depth", "DUCK DEPTH");
+    addKnob ("b_duck_release", "DUCK REL");
+    addKnob ("b_duck_hold", "DUCK HOLD");
+    addKnob ("b_duck_note", "DUCK NOTE");
+    addToggle ("b_duck_passthru", "DUCK THRU");
+    addToggle ("b_duck_target_r", "DUCK ROLL");
+    addToggle ("b_duck_target_s", "DUCK SLIDE");
+    addToggle ("b_duck_target_f", "DUCK FX");
 
     subOwner.addItemList ({ "SUB ROLL", "SUB SLIDE", "SUB OFF" }, 1);
     addAndMakeVisible (subOwner);
     subOwnerAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (
         synth.parameters(), "b_subowner", subOwner);
 
-    setSize (640, 860);
+    duckSource.addItemList ({ "DUCK INTERNAL", "DUCK MIDI", "DUCK AUDIO" }, 1);
+    addAndMakeVisible (duckSource);
+    duckSourceAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (
+        synth.parameters(), "b_duck_src", duckSource);
+    duckCurve.addItemList ({ "DUCK LIN", "DUCK EXP" }, 1);
+    addAndMakeVisible (duckCurve);
+    duckCurveAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (
+        synth.parameters(), "b_duck_curve", duckCurve);
+    juce::StringArray channels { "DUCK CH ANY" };
+    for (int ch = 1; ch <= 16; ++ch)
+        channels.add ("DUCK CH " + juce::String (ch));
+    duckChannel.addItemList (channels, 1);
+    addAndMakeVisible (duckChannel);
+    duckChannelAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment> (
+        synth.parameters(), "b_duck_ch", duckChannel);
+
+    duckReadout.setColour (juce::Label::textColourId, juce::Colours::white);
+    addAndMakeVisible (duckReadout);
+    startTimerHz (30);
+
+    setSize (640, 1280);
 }
 
-PsybAudioProcessorEditor::~PsybAudioProcessorEditor() = default;
+PsybAudioProcessorEditor::~PsybAudioProcessorEditor()
+{
+    stopTimer();
+}
+
+void PsybAudioProcessorEditor::timerCallback()
+{
+    static const char* names[] = { "ACTIVE", "NO BUS", "SILENT", "WAITING", "STOPPED" };
+    const int state = std::clamp (synth.duckState(), 0, 4);
+    duckReadout.setText ("DUCK " + juce::String (names[state]) + "  " + juce::String (synth.duckGain(), 2),
+                         juce::dontSendNotification);
+}
 
 void PsybAudioProcessorEditor::paint (juce::Graphics& g)
 {
@@ -88,4 +129,8 @@ void PsybAudioProcessorEditor::resized()
     for (auto& toggle : toggles)
         toggle->button.setBounds (area.removeFromTop (rowH));
     subOwner.setBounds (area.removeFromTop (rowH));
+    duckSource.setBounds (area.removeFromTop (rowH));
+    duckCurve.setBounds (area.removeFromTop (rowH));
+    duckChannel.setBounds (area.removeFromTop (rowH));
+    duckReadout.setBounds (area.removeFromTop (rowH));
 }

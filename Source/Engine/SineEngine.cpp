@@ -21,6 +21,7 @@ void SineEngine::prepare (double rate, int) { sampleRate = rate; }
 void SineEngine::reset()
 {
     enabled = false;
+    duckGain = 1.f;
     active = {};
     tail = {};
     stolen = {};
@@ -161,7 +162,10 @@ void SineEngine::render (float* mono, int n)
                 continue;
             }
 
-            mono[i] += sample;
+            if (duckGain == 1.f)
+                mono[i] += sample;
+            else
+                mono[i] += sample * duckGain;
         }
     }
 }

@@ -22,6 +22,7 @@ public:
     void setLevelDb (float db) override;
     void setSubOwner (SubOwner owner) override;
     void setAccentAmount (float amount01) override;
+    void setDuckGain (float gain) override { duckGain = gain; }
     bool noteOn (int sample, int note, int velocity, bool retrigger, float glideMs, bool accented) override;
     void noteOff() override;
     void releaseAll() override;
@@ -52,6 +53,7 @@ private:
     float gainTarget = 1.f;
     float gainSm = 1.f;
     float gainCoef = 0.f;
+    float duckGain = 1.f;
     SubOwner owner = SubOwner::Roll;
     RollParams target {};
     RollVoice voice[3] {};

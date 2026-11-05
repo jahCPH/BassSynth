@@ -81,6 +81,9 @@ void PsyEngine::reset()
 {
     duckSource = DuckSource::Internal;
     duckNote = 36;
+    duckChannel = 0;
+    duckPassthru = false;
+    duck.reset();
     order = ArpOrder::Up;
     latch = false;
     globalSwing = 0.0;
@@ -144,8 +147,19 @@ void PsyEngine::setLatch (bool on)
     releaseOpenTies();
 }
 
-void PsyEngine::setDuckSource (DuckSource source) { duckSource = source; }
-void PsyEngine::setDuckNote (int note) { duckNote = note; }
+void PsyEngine::setDuckSource (DuckSource source)
+{
+    duckSource = source;
+    duck.setSource (source);
+}
+void PsyEngine::setDuckNote (int note) { duckNote = clampMidi (note); }
+void PsyEngine::setDuckDepth (float percent) { duck.setDepthPercent (percent); }
+void PsyEngine::setDuckReleaseMs (float ms) { duck.setReleaseMs (ms); }
+void PsyEngine::setDuckHoldMs (float ms) { duck.setHoldMs (ms); }
+void PsyEngine::setDuckCurve (DuckCurve curve) { duck.setCurve (curve); }
+void PsyEngine::setDuckChannel (int midiChannelOrAny) { duckChannel = std::clamp (midiChannelOrAny, 0, 16); }
+void PsyEngine::setDuckPassthru (bool on) { duckPassthru = on; }
+void PsyEngine::setDuckTarget (int engine, bool on) { duck.setTarget (engine, on); }
 void PsyEngine::setGlobalSwing (double swing) { globalSwing = std::clamp (swing, 0.0, 0.75); }
 void PsyEngine::setLane (int engine, const LaneConfig& lane)
 {
@@ -286,9 +300,16 @@ void PsyEngine::noteOn (int sample, int channel, int note, int velocity)
     if (channel < 0 || channel > 15 || note < 0 || note > 127)
         return;
 
-    const bool duck = duckSource == DuckSource::Midi && note == duckNote;
-    route[channel][note] = static_cast<uint8_t> (duck ? 2 : 1);
-    if (duck || velocity <= 0)
+    const bool channelOk = duckChannel == 0 || channel + 1 == duckChannel;
+    const bool duckHit = duckSource == DuckSource::Midi && note == duckNote && channelOk;
+    if (duckHit)
+    {
+        duck.hearMidi();
+        duck.schedule();
+    }
+    const bool consumed = duckHit && ! duckPassthru;
+    route[channel][note] = static_cast<uint8_t> (consumed ? 2 : 1);
+    if (consumed || velocity <= 0)
         return;
 
     const bool newGesture = downCount == 0;
@@ -618,7 +639,8 @@ void PsyEngine::renderSample (float& out)
     out *= outputGain;
 }
 
-void PsyEngine::process (const Block& block, const MidiIn* midi, int midiCount, float* monoOut)
+void PsyEngine::process (const Block& block, const MidiIn* midi, int midiCount, float* monoOut,
+                        const float* const* sidechain, int sidechainChannels, float* duckGainOut)
 {
     triggersN = 0;
     if (block.numSamples <= 0 || block.bpm <= 0.0 || block.sampleRate <= 0.0)
@@ -626,6 +648,10 @@ void PsyEngine::process (const Block& block, const MidiIn* midi, int midiCount, 
 
     const FlushDenormals flushDenormals;
     renderRate = block.sampleRate;
+    duck.prepare (block.sampleRate, busLatency);
+    duck.setPlaying (block.playing);
+    const bool sidechainLive = sidechain != nullptr && sidechainChannels > 0;
+    duck.setBusConnected (sidechainLive);
     for (int e = 0; e < kEngineCount; ++e)
     {
         if (engines[static_cast<size_t> (e)] == nullptr)
@@ -647,6 +673,22 @@ void PsyEngine::process (const Block& block, const MidiIn* midi, int midiCount, 
     transportWasPlaying = block.playing;
     const double ppqEnd = block.ppqStart
                           + static_cast<double> (block.numSamples) * block.bpm / (block.sampleRate * 60.0);
+
+    int quarterAt[64] {};
+    int quarterN = 0;
+    if (block.playing && duckSource == DuckSource::Internal)
+    {
+        int64_t quarter = static_cast<int64_t> (std::floor (block.ppqStart));
+        if (static_cast<double> (quarter) < block.ppqStart - 1.0e-9)
+            ++quarter;
+        for (; static_cast<double> (quarter) < ppqEnd - 1.0e-9 && quarterN < 64; ++quarter)
+        {
+            const int at = sampleAtPpq (static_cast<double> (quarter), block.ppqStart, block.bpm, block.sampleRate);
+            if (at >= 0 && at < block.numSamples)
+                quarterAt[quarterN++] = at;
+        }
+    }
+    int quarterIndex = 0;
 
     for (int s = 0; s < block.numSamples; ++s)
     {
@@ -708,6 +750,36 @@ void PsyEngine::process (const Block& block, const MidiIn* midi, int midiCount, 
                 }
             }
         }
+
+        while (quarterIndex < quarterN && quarterAt[quarterIndex] < s)
+            ++quarterIndex;
+        if (quarterIndex < quarterN && quarterAt[quarterIndex] == s)
+        {
+            duck.schedule();
+            ++quarterIndex;
+        }
+
+        if (sidechainLive && duckSource == DuckSource::Audio)
+        {
+            float sum = 0.f;
+            int heard = 0;
+            for (int c = 0; c < sidechainChannels; ++c)
+            {
+                if (sidechain[c] == nullptr)
+                    continue;
+                sum += sidechain[c][s];
+                ++heard;
+            }
+            if (heard > 0)
+                duck.feedAudio (sum / static_cast<float> (heard));
+        }
+
+        const float env = duck.advance();
+        for (int e = 0; e < kEngineCount; ++e)
+            if (engines[static_cast<size_t> (e)] != nullptr)
+                engines[static_cast<size_t> (e)]->setDuckGain (duck.appliedGain (e));
+        if (duckGainOut != nullptr)
+            duckGainOut[s] = env;
 
         float sample = 0.f;
         renderSample (sample);
